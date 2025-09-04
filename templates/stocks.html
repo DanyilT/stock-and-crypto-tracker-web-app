@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% import "partials/asset_table.html" as asset_table %}
+{% import "partials/search_bar.html" as search_bar %}
+{% import "partials/asset_chart.html" as asset_chart %}
+
+{% block content %}
+<div class="container my-4">
+    <div id="market-status-banner" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+    <div class="row align-items-center mb-4">
+        <div class="col"><h1 class="mb-0">Stocks</h1></div>
+        {{ search_bar.search_bar('stock-search', placeholder='Search stocks by symbol...') }}
+    </div>
+
+    <div id="search-results-container" class="mt-3" style="display:none;">
+        {{ asset_table.asset_table('search-results-table', ['#', 'Symbol', 'Name', 'Price', 'Change', 'Market Cap', 'Actions']) }}
+    </div>
+
+    {% include "partials/stocks_table.html" %}
+
+
+{#    <div id="stock-chart"></div>#}
+
+{#    <div class="mt-4">#}
+{#        {{ asset_chart.asset_chart('stock-chart', 'Stock Chart') }}#}
+{#    </div>#}
+</div>
+
+<!-- utils -->
+<script src="{{ url_for('static', filename='js/stocks/utils/StockHelpers.js') }}"></script>
+
+<!-- features -->
+<script src="{{ url_for('static', filename='js/stocks/features/MarketStatusBanner.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/features/StockSearch.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/features/StockActionButton.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/features/StockActions.js') }}"></script>
+
+<!-- core -->
+<script src="{{ url_for('static', filename='js/stocks/core/StocksTable.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/core/StocksWatchlistManager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/core/StockChart.js') }}"></script>
+
+<!-- loaders -->
+<script src="{{ url_for('static', filename='js/stocks/loaders/TableLoader.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/loaders/PopularStocksLoader.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/loaders/WatchlistLoader.js') }}"></script>
+
+<script>
+
+// In stocks.html
+document.addEventListener('DOMContentLoaded', () => {
+    // Create US and EU market banners
+    MarketStatusBanner.createBanners(['US', 'EU'], { containerId: "market-status-banner", updateInterval: 1000 });
+
+    const watchlistManager = new StocksWatchlistManager();
+
+    new StockSearch('stock-search', 'search-results-container', 'search-results-table', watchlistManager);
+
+    const popularTable = new StocksTable('popular-stocks-table', watchlistManager);
+    fetch('/api/stocks/popular')
+        .then(response => response.json())
+        .then(data => {
+            popularTable.data = data;
+            popularTable.render();
+        })
+        .catch(error => console.error('Error fetching popular stocks:', error));
+
+    const watchlistTable = new StocksTable('watchlist-stocks-table', watchlistManager);
+    if (watchlistManager.getWatchlist().length > 0) {
+        for (let symbol of watchlistManager.getWatchlist()) {
+            fetch(`/api/stock/${symbol}`)
+                .then(response => response.json())
+                .then(data => {
+                    watchlistTable.data.push(data);
+                    watchlistTable.render();
+                })
+                .catch(error => console.error(`Error fetching stock data for ${symbol}:`, error));
+        }
+    } else {
+        document.getElementById('watchlist-stocks-table').innerHTML = '<tr><td colspan="7" class="text-center">Your watchlist is empty. Add stocks to your watchlist to see them here.</td></tr>';
+    }
+
+    // Loaders
+    const popularLoader = new PopularStocksLoader(popularTable, parseInt(new URLSearchParams(window.location.search).get('top')) || 10, true);
+    const watchlistLoader = new WatchlistLoader(watchlistTable, watchlistManager, true);
+
+    // Setup control handlers
+    setupTableControls();
+
+
+
+    {#const stockChart = new StockChart();#}
+
+    {#var testStockChart = new StockChart('stock-chart');#}
+
+    {#fetch('/api/stock/AAPL/history')#}
+    {#    .then(response => response.json())#}
+    {#    .then(data => {#}
+    {#        testStockChart.renderChart('AAPL', data);#}
+    {#    })#}
+    {#    .catch(error => console.error('Error fetching stock data:', error));#}
+
+
+
+
+    function setupTableControls() {
+        const autoloadToggle = document.getElementById('stocks-autoload-toggle');
+        const reloadButton = document.getElementById('stocks-reload');
+        const tabsContainer = document.getElementById('stocks-tabs');
+
+        // Auto-loading toggle handler
+        autoloadToggle?.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+
+            if (enabled) {
+                popularLoader.enableAutoLoading();
+                watchlistLoader.enableAutoLoading();
+            } else {
+                popularLoader.disableAutoLoading();
+                watchlistLoader.disableAutoLoading();
+            }
+
+            // Update button state
+            if (reloadButton) {
+                reloadButton.disabled = enabled;
+                reloadButton.textContent = enabled ? 'Auto' : 'Reload';
+            }
+        });
+
+        // Manual reload handler
+        reloadButton?.addEventListener('click', async () => {
+            const activeTab = document.querySelector('#stocks-tabs .nav-link.active');
+            const isPopularTab = activeTab?.id === 'popular-tab';
+
+            reloadButton.disabled = true;
+            reloadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+            try {
+                if (isPopularTab) {
+                    await popularLoader.manualReload();
+                } else {
+                    await watchlistLoader.manualReload();
+                }
+            } finally {
+                reloadButton.disabled = autoloadToggle?.checked || false;
+                reloadButton.textContent = autoloadToggle?.checked ? 'Auto' : 'Reload';
+            }
+        });
+
+        // Update loader activity based on active tab
+        tabsContainer?.addEventListener('shown.bs.tab', (e) => {
+            const isPopularTab = e.target.id === 'popular-tab';
+            const isAutoloadEnabled = autoloadToggle?.checked || false;
+
+            // Only the active tab's loader should be running
+            if (isPopularTab) {
+                if (isAutoloadEnabled) popularLoader.enableAutoLoading();
+                watchlistLoader.disableAutoLoading();
+            } else {
+                if (isAutoloadEnabled) watchlistLoader.enableAutoLoading();
+                popularLoader.disableAutoLoading();
+            }
+        });
+
+        // Initialize button state
+        if (reloadButton && autoloadToggle) {
+            reloadButton.disabled = autoloadToggle.checked;
+            reloadButton.textContent = autoloadToggle.checked ? 'Auto' : 'Reload';
+        }
+    }
+});
+</script>
+{% endblock %}

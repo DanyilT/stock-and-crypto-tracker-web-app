@@ -1,0 +1,16 @@
+{% macro asset_table(table_id, columns) %}
+<div class="table-responsive" id="{{ table_id }}-container">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                {% for col in columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody id="{{ table_id }}">
+            <!-- Data will be loaded here -->
+        </tbody>
+    </table>
+</div>
+{% endmacro %}

@@ -1,0 +1,30 @@
+<div class="container my-4" id="stocks-table-container">
+    <ul class="nav nav-tabs mb-3" id="stocks-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="popular-tab" data-bs-toggle="tab" data-bs-target="#popular-pane" type="button" role="tab" aria-controls="popular-pane" aria-selected="true">
+                <i class="fas fa-fire me-1"></i>Popular
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="watchlist-tab" data-bs-toggle="tab" data-bs-target="#watchlist-pane" type="button" role="tab" aria-controls="watchlist-pane" aria-selected="false">
+                <i class="fas fa-star me-1"></i>Watchlist
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="stocks-tabs-content">
+        <div class="tab-pane fade show active" id="popular-pane" role="tabpanel" aria-labelledby="popular-tab" tabindex="0">
+            {{ asset_table.asset_table('popular-stocks-table', ['#', 'Symbol', 'Name', 'Price', 'Change', 'Market Cap', 'Actions']) }}
+        </div>
+        <div class="tab-pane fade" id="watchlist-pane" role="tabpanel" aria-labelledby="watchlist-tab" tabindex="0">
+            {{ asset_table.asset_table('watchlist-stocks-table', ['#', 'Symbol', 'Name', 'Price', 'Change', 'Market Cap', 'Actions']) }}
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-end gap-1 mt-2" id="stocks-controls">
+        <div class="form-switch">
+            <input class="form-check-input" type="checkbox" id="stocks-autoload-toggle" checked title="Autoload (enable/disable)">
+        </div>
+        <button id="stocks-reload" class="btn btn-sm btn-warning">Reload</button>
+    </div>
+</div>

@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Tracker - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-line me-2"></i>Financial Markets Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Stocks Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-trophy me-2"></i>Top {{top}} Stocks
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="loading-stocks" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading stock data...</p>
+                </div>
+                <div id="error-stocks" class="alert alert-danger d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="error-message-stocks"></span>
+                </div>
+                <div class="table-responsive d-none" id="stocks-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Symbol</th>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Change</th>
+                                <th>Market Cap</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stocks-table">
+                            <!-- Stock data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Area -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0" id="chart-title">
+                    <i class="fas fa-chart-area me-2"></i>Select an asset to view chart
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="chart-placeholder" class="text-center text-muted py-5">
+                    <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                    <p class="lead">Click on a stock or crypto to see its price chart</p>
+                </div>
+                <div id="chart-container" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label">Time Period:</label>
+                        <div class="btn-group btn-group-sm" role="group" id="period-buttons">
+                            <button type="button" class="btn btn-outline-primary active" data-period="1mo" data-crypto-days="30">1M</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="3mo" data-crypto-days="90">3M</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="6mo" data-crypto-days="180">6M</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="1y" data-crypto-days="365">1Y</button>
+                        </div>
+                    </div>
+                    <canvas id="stockChart" width="400" height="200"></canvas>
+                    <div class="mt-3 text-center">
+                        <button id="view-details-btn" class="btn btn-primary">
+                            <i class="fas fa-info-circle me-2"></i>View Full Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cryptocurrency Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fab fa-bitcoin me-2"></i>Top 10 Cryptocurrencies
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="loading-crypto" class="text-center">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading cryptocurrency data...</p>
+                </div>
+                <div id="error-crypto" class="alert alert-danger d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="error-message-crypto"></span>
+                </div>
+                <div class="table-responsive d-none" id="crypto-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Symbol</th>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>24h Change</th>
+                                <th>Market Cap</th>
+                                <th>Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crypto-table">
+                            <!-- Crypto data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let stockChart = null;
+    let selectedAsset = null;
+    let selectedAssetType = null; // 'stock' or 'crypto'
+    let currentPeriod = '1mo';
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPopularStocks();
+        loadPopularCrypto();
+        setupPeriodButtons();
+    });
+
+    function loadPopularStocks() {
+        const loadingEl = document.getElementById('loading-stocks');
+        const errorEl = document.getElementById('error-stocks');
+        const containerEl = document.getElementById('stocks-container');
+
+        loadingEl.classList.remove('d-none');
+        errorEl.classList.add('d-none');
+        containerEl.classList.add('d-none');
+
+        fetch(`/api/stocks/popular?top={{top}}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingEl.classList.add('d-none');
+
+                if (data.error) {
+                    showStockError(data.error);
+                    return;
+                }
+
+                const tbody = document.getElementById('stocks-table');
+                tbody.innerHTML = '';
+
+                data.forEach((stock, index) => {
+                    const row = createStockRow(stock, index + 1);
+                    tbody.appendChild(row);
+                });
+
+                containerEl.classList.remove('d-none');
+            })
+            .catch(error => {
+                loadingEl.classList.add('d-none');
+                showStockError('Failed to load stock data');
+                console.error('Error loading stocks:', error);
+            });
+    }
+
+    function loadPopularCrypto() {
+        const loadingEl = document.getElementById('loading-crypto');
+        const errorEl = document.getElementById('error-crypto');
+        const containerEl = document.getElementById('crypto-container');
+
+        loadingEl.classList.remove('d-none');
+        errorEl.classList.add('d-none');
+        containerEl.classList.add('d-none');
+
+        fetch('/api/crypto/popular')
+            .then(response => response.json())
+            .then(data => {
+                loadingEl.classList.add('d-none');
+
+                if (data.error) {
+                    showCryptoError(data.error);
+                    return;
+                }
+
+                const tbody = document.getElementById('crypto-table');
+                tbody.innerHTML = '';
+
+                data.forEach((crypto, index) => {
+                    const row = createCryptoRow(crypto, index + 1);
+                    tbody.appendChild(row);
+                });
+
+                containerEl.classList.remove('d-none');
+            })
+            .catch(error => {
+                loadingEl.classList.add('d-none');
+                showCryptoError('Failed to load cryptocurrency data');
+                console.error('Error loading crypto:', error);
+            });
+    }
+
+    function createStockRow(stock, rank) {
+        const row = document.createElement('tr');
+        const changeClass = stock.change >= 0 ? 'text-success' : 'text-danger';
+        const changeIcon = stock.change >= 0 ? '↗' : '↘';
+
+        row.style.cursor = 'pointer';
+        row.setAttribute('data-symbol', stock.symbol);
+        row.setAttribute('data-name', stock.name);
+        row.setAttribute('data-type', 'stock');
+
+        row.innerHTML = `
+            <td><span class="badge bg-secondary">${rank}</span></td>
+            <td><strong>${stock.symbol}</strong></td>
+            <td class="text-truncate" style="max-width: 150px;" title="${stock.name}">${stock.name}</td>
+            <td><strong>$${stock.price}</strong></td>
+            <td class="${changeClass}">
+                ${changeIcon} $${Math.abs(stock.change)} (${stock.changePercent}%)
+            </td>
+            <td>${stock.marketCap}</td>
+        `;
+
+        row.addEventListener('click', function() {
+            selectAsset(this, 'stock');
+        });
+
+        return row;
+    }
+
+    function createCryptoRow(crypto, rank) {
+        const row = document.createElement('tr');
+        const changeClass = crypto.change >= 0 ? 'text-success' : 'text-danger';
+        const changeIcon = crypto.change >= 0 ? '↗' : '↘';
+
+        row.style.cursor = 'pointer';
+        row.setAttribute('data-symbol', crypto.symbol);
+        row.setAttribute('data-name', crypto.name);
+        row.setAttribute('data-id', crypto.id);
+        row.setAttribute('data-type', 'crypto');
+
+        row.innerHTML = `
+            <td><span class="badge bg-warning text-dark">${rank}</span></td>
+            <td><strong>${crypto.symbol}</strong></td>
+            <td class="text-truncate" style="max-width: 150px;" title="${crypto.name}">${crypto.name}</td>
+            <td><strong>$${crypto.current_price}</strong></td>
+            <td class="${changeClass}">
+                ${changeIcon} ${Math.abs(crypto.price_change_percentage_24h)}%
+            </td>
+            <td>${crypto.market_cap}</td>
+            <td>${formatNumber(crypto.total_volume)}</td>
+        `;
+
+        row.addEventListener('click', function() {
+            selectAsset(this, 'crypto');
+        });
+
+        return row;
+    }
+
+    function selectAsset(rowElement, assetType) {
+        const symbol = rowElement.getAttribute('data-symbol');
+        const name = rowElement.getAttribute('data-name');
+        const id = rowElement.getAttribute('data-id');
+
+        // Remove previous selection highlight
+        document.querySelectorAll('#stocks-table tr, #crypto-table tr').forEach(tr => {
+            tr.classList.remove('table-active');
+        });
+
+        // Highlight selected row
+        rowElement.classList.add('table-active');
+
+        // If same asset clicked, go to details (only for stocks for now)
+        if (selectedAsset === symbol && selectedAssetType === assetType) {
+            if (assetType === 'stock') {
+                goToStockDetails(symbol);
+            }
+        } else {
+            // Load chart for new asset
+            selectedAsset = symbol;
+            selectedAssetType = assetType;
+
+            if (assetType === 'stock') {
+                loadStockChart(symbol, name, currentPeriod);
+            } else {
+                loadCryptoChart(id, symbol, name, getDaysFromPeriod(currentPeriod));
+            }
+        }
+    }
+
+    function loadStockChart(symbol, name, period) {
+        updateChartTitle(`Loading ${symbol}...`);
+        showChartContainer();
+
+        fetch(`/api/stock/${symbol}/history?period=${period}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showChartError(data.error);
+                    return;
+                }
+
+                updateChart(data, symbol, name);
+                updateChartTitle(`${symbol} - ${name}`);
+                updateDetailsButton(symbol, 'stock');
+            })
+            .catch(error => {
+                showChartError('Failed to load chart data');
+                console.error('Error loading chart:', error);
+            });
+    }
+
+    function loadCryptoChart(cryptoId, symbol, name, days) {
+        updateChartTitle(`Loading ${symbol}...`);
+        showChartContainer();
+
+        fetch(`/api/crypto/${cryptoId}/history?days=${days}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showChartError(data.error);
+                    return;
+                }
+
+                updateChart(data, symbol, name);
+                updateChartTitle(`${symbol} - ${name}`);
+                updateDetailsButton(symbol, 'crypto');
+            })
+            .catch(error => {
+                showChartError('Failed to load chart data');
+                console.error('Error loading chart:', error);
+            });
+    }
+
+    function updateChart(data, symbol, name) {
+        const ctx = document.getElementById('stockChart').getContext('2d');
+
+        if (stockChart) {
+            stockChart.destroy();
+        }
+
+        const labels = data.map(item => item.date);
+        const prices = data.map(item => item.price);
+
+        stockChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `${symbol} Price`,
+                    data: prices,
+                    borderColor: selectedAssetType === 'crypto' ? 'rgb(255, 193, 7)' : 'rgb(54, 162, 235)',
+                    backgroundColor: selectedAssetType === 'crypto' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Price ($)'
+                        },
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${symbol} - ${currentPeriod.toUpperCase()} Chart`
+                    },
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    function setupPeriodButtons() {
+        document.getElementById('period-buttons').addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON') {
+                const newPeriod = e.target.getAttribute('data-period');
+                const cryptoDays = e.target.getAttribute('data-crypto-days');
+
+                // Update active button
+                this.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+
+                currentPeriod = newPeriod;
+
+                // Reload chart if asset is selected
+                if (selectedAsset && selectedAssetType) {
+                    const selectedRow = document.querySelector(`tr[data-symbol="${selectedAsset}"][data-type="${selectedAssetType}"]`);
+                    const name = selectedRow.getAttribute('data-name');
+
+                    if (selectedAssetType === 'stock') {
+                        loadStockChart(selectedAsset, name, currentPeriod);
+                    } else {
+                        const id = selectedRow.getAttribute('data-id');
+                        loadCryptoChart(id, selectedAsset, name, cryptoDays);
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartTitle(title) {
+        document.getElementById('chart-title').innerHTML = `<i class="fas fa-chart-area me-2"></i>${title}`;
+    }
+
+    function showChartContainer() {
+        document.getElementById('chart-placeholder').classList.add('d-none');
+        document.getElementById('chart-container').classList.remove('d-none');
+    }
+
+    function updateDetailsButton(symbol, type) {
+        const detailsBtn = document.getElementById('view-details-btn');
+        if (type === 'stock') {
+            detailsBtn.onclick = () => goToStockDetails(symbol);
+            detailsBtn.style.display = 'inline-block';
+        } else {
+            detailsBtn.style.display = 'none'; // Hide for crypto until crypto detail page is implemented
+        }
+    }
+
+    function getDaysFromPeriod(period) {
+        const periodMap = {
+            '1mo': '30',
+            '3mo': '90',
+            '6mo': '180',
+            '1y': '365'
+        };
+        return periodMap[period] || '30';
+    }
+
+    function goToStockDetails(symbol) {
+        window.location.href = `/stock/${symbol}`;
+    }
+
+    function formatNumber(num) {
+        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+        return num.toLocaleString();
+    }
+
+    function showStockError(message) {
+        const errorEl = document.getElementById('error-stocks');
+        const messageEl = document.getElementById('error-message-stocks');
+        messageEl.textContent = message;
+        errorEl.classList.remove('d-none');
+    }
+
+    function showCryptoError(message) {
+        const errorEl = document.getElementById('error-crypto');
+        const messageEl = document.getElementById('error-message-crypto');
+        messageEl.textContent = message;
+        errorEl.classList.remove('d-none');
+    }
+
+    function showChartError(message) {
+        updateChartTitle(`Error: ${message}`);
+    }
+</script>
+{% endblock %}

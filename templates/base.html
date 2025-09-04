@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Stock Tracker{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">  <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" rel="stylesheet">  <!-- Font Awesome -->
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-chart-line me-2"></i>Stock Tracker
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('stocks') }}">Stocks</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Dany | Stock Tracker. All rights reserved.</p>
+            <!-- Cookie settings button will be automatically added here -->
+        </div>
+    </footer>
+
+    <style>
+        .notification-container {
+            max-width: 350px;
+            min-width: 250px;
+            pointer-events: none;
+        }
+        .notification {
+            pointer-events: auto;
+            margin-bottom: 0.5rem;
+            min-width: 250px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            opacity: 0.95;
+            transition: opacity 0.3s;
+        }
+    </style>
+    <div id="notification-container" class="notification-container position-fixed top-0 end-0 p-3" style="z-index: 1000;"></div>
+    <script src="{{ url_for('static', filename='js/NotificationManager.js') }}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js"></script>  <!-- Bootstrap JS -->
+{#    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <!-- Chart.js -->#}
+
+{#    <script src="{{ url_for('static', filename='js/CookieConsent.js') }}"></script>#}
+<!-- Load cookie management system -->
+{#<script src="{{ url_for('static', filename='js/cookies/CookieManager.js') }}"></script>#}
+{#<script src="{{ url_for('static', filename='js/cookies/ConsentModal.js') }}"></script>#}
+{#<script src="{{ url_for('static', filename='js/cookies/WatchlistConsent.js') }}"></script>#}
+{#<script src="{{ url_for('static', filename='js/cookies/PreferencesConsent.js') }}"></script>#}
+{#<script src="{{ url_for('static', filename='js/cookies/CookieSettings.js') }}"></script>#}
+{#<script src="{{ url_for('static', filename='js/cookies/CookieUtils.js') }}"></script>#}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

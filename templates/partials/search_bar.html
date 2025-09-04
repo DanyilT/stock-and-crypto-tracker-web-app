@@ -1,0 +1,5 @@
+{% macro search_bar(search_id, placeholder='Search...') %}
+<form class="col-auto d-flex" onsubmit="return false;">
+    <input id="{{ search_id }}" class="form-control" type="search" placeholder="{{ placeholder }}" aria-label="Search" autocomplete="off" autofocus>
+</form>
+{% endmacro %}
