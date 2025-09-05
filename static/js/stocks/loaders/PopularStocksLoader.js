@@ -10,10 +10,8 @@ class PopularStocksLoader extends TableLoader {
 
     async fetchPopularStocks() {
         try {
-            const response = await fetch(`/api/stocks/popular?top=${this.top}`);
-            if (!response.ok) throw new Error(`Failed to fetch popular stocks: ${response.status}`);
-
-            const data = await response.json();
+            // Use StockAPI for fetching popular stocks
+            const data = await StockAPI.getPopularStocks(this.top);
             return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Popular stocks fetch error:', error);
@@ -23,9 +21,8 @@ class PopularStocksLoader extends TableLoader {
 
     async fetchStockData(symbol) {
         try {
-            const response = await fetch(`/api/stock/${symbol}`);
-            if (!response.ok) throw new Error(`Failed to fetch stock data for ${symbol}: ${response.status}`);
-            return await response.json();
+            // Use StockAPI for fetching individual stock data
+            return await StockAPI.getStock(symbol);
         } catch (error) {
             console.error(`Stock data fetch error for ${symbol}:`, error);
             throw error;

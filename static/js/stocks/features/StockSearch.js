@@ -75,9 +75,8 @@ class StockSearch {
         this.showLoading();
 
         try {
-            const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error(`Search failed: ${response.status}`);
-            const result = await response.json();
+            // Use StockAPI for search
+            const result = await StockAPI.searchStocks(query);
             this.displayResult(result);
         } catch (error) {
             console.error('Search error:', error);

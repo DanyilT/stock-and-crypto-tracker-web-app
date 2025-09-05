@@ -155,27 +155,24 @@ class StockActions {
             }
         }
 
-        // Fetch chart data and render chart
+        // Fetch chart data and render chart using StockAPI
         const valid_periods = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'];
         const valid_intervals = ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'];
-        let url = null;
 
-        if (valid_periods.includes(period) && valid_intervals.includes(interval)) {
-            url = `/api/stock/${symbol}/history?period=${period}&interval=${interval}`;
-        } else if (period === 'custom' && customStart && customEnd) {
-            url = `/api/stock/${symbol}/history?start=${customStart}&end=${customEnd}&interval=${interval}`;
-        }
-        if (url) url += chartType === 'candlestick' ? '&ohlc' : '';
+        let options = {};
+        if (valid_periods.includes(period) && valid_intervals.includes(interval)) options = { period, interval };
+        else if (period === 'custom' && customStart && customEnd) options = { start: customStart, end: customEnd, interval };
+        if (chartType === 'candlestick') options.ohlc = true;
 
-        if (url) {
-            fetch(url)
-                .then(response => response.json())
+        if (Object.keys(options).length > 0) {
+            // Use StockAPI for fetching historical data
+            StockAPI.getStockHistory(symbol, options)
                 .then(data => {
                     new StockChart(containerId, { chartType }).renderChart(symbol, data);
                 })
                 .catch(error => {
                     console.error('Error fetching stock data:', error);
-                    // Optional: show an error message in the chart area
+                    // Show an error message in the chart area
                     if (chartEl) {
                         try {
                             const tempChart = new StockChart(containerId);

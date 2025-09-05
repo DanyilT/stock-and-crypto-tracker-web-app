@@ -13,15 +13,10 @@ class WatchlistLoader extends TableLoader {
             const watchlistSymbols = this.watchlistManager.getWatchlist();
             if (!watchlistSymbols || watchlistSymbols.length === 0) return [];
 
-            // Fetch data for each symbol in the watchlist
+            // Fetch data for each symbol in the watchlist using StockAPI
             const stockPromises = watchlistSymbols.map(async (symbol) => {
                 try {
-                    const response = await fetch(`/api/stock/${symbol}`);
-                    if (!response.ok) {
-                        console.warn(`Failed to fetch data for ${symbol}: ${response.status}`);
-                        return null;
-                    }
-                    return await response.json();
+                    return await StockAPI.getStock(symbol);
                 } catch (error) {
                     console.warn(`Error fetching ${symbol}:`, error);
                     return null;
@@ -40,9 +35,8 @@ class WatchlistLoader extends TableLoader {
 
     async fetchStockData(symbol) {
         try {
-            const response = await fetch(`/api/stock/${symbol}`);
-            if (!response.ok) throw new Error(`Failed to fetch stock data for ${symbol}: ${response.status}`);
-            return await response.json();
+            // Use StockAPI for fetching individual stock data
+            return await StockAPI.getStock(symbol);
         } catch (error) {
             console.error(`Stock data fetch error for ${symbol}:`, error);
             throw error;

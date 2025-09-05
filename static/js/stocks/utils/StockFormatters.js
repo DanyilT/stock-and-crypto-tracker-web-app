@@ -281,7 +281,7 @@ function formatPriceChange(changeData, options = {}) {
     const { showCurrency = true, showSign = true, showChangeIcon = false, colored = true } = options;
 
     // Format absolute change
-    const absFormatted = absolute !== null && !isNaN(absolute) ? (showCurrency ? formatPrice(Math.abs(absolute), options) : Math.abs(absolute).toFixed(2)) : 'N/A';
+    const absFormatted = absolute !== null && !isNaN(absolute) ? (showCurrency ? formatCurrency(Math.abs(absolute), options) : Math.abs(absolute).toFixed(2)) : 'N/A';
 
     // Format percentage change
     const pctFormatted = formatPercentage(percentage, { showSign, colored, ...options });
@@ -293,7 +293,7 @@ function formatPriceChange(changeData, options = {}) {
 
     // Create sign prefix for absolute value
     const sign = absolute > 0 ? '+' : absolute < 0 ? '-' : '';
-    const changeIcon = absolute > 0 ? '↗' : absolute < 0 ? '↘' : '';
+    const changeIcon = absolute > 0 ? '↗' : absolute < 0 ? '↘' : '→';
 
     return {
         absolute: {
@@ -302,7 +302,7 @@ function formatPriceChange(changeData, options = {}) {
         },
         percentage: pctFormatted,
         combined: {
-            value: absolute !== null && !isNaN(absolute) && percentage !== null && !isNaN(percentage) ? `${showChangeIcon ? changeIcon : ''}${showSign ? sign : ''}${absFormatted}` : 'N/A',
+            value: absolute !== null && !isNaN(absolute) && percentage !== null && !isNaN(percentage) ? `${showChangeIcon ? changeIcon + ' ' : ''}${showSign ? sign : ''}${absFormatted} (${pctFormatted.value})` : 'N/A',
             color: color
         }
     };
@@ -334,7 +334,6 @@ function formatLargeNumber(value, options = {}) {
 }
 
 
-
 /**
  * Get CSS class for color-coded values
  * @param {string} colorType - Color type ('positive', 'negative', 'neutral')
@@ -350,6 +349,7 @@ function getColorClass(colorType, prefix = 'text') {
 
     return colorMap[colorType] || colorMap.neutral;
 }
+
 
 // Export all formatting functions
 window.StockFormatters = {

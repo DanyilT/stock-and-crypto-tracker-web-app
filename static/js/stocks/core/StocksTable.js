@@ -26,8 +26,15 @@ class StocksTable {
     createTableRow(item, index) {
         // Helper values
         const marketStatus = this.getMarketStatus(item.market);  // Market open/close status (true/false/unknown)
-        const currencySymbolDisplayFormat = item.currency === 'USD' ? '$' : item.currency === 'EUR' ? '€' : ' ' + item.currency || '';  // Get currency symbol
-        const currencySymbol = currencySymbolDisplayFormat.trim();
+
+        // Format values using StockFormatters
+        const formattedSymbol = StockFormatters.formatSymbol(item.symbol);
+        const formattedName = StockFormatters.formatCompanyName(item.name, 30);
+        const formattedPrice = StockFormatters.formatPrice(item.price, { currency: item.currency });
+        const formattedMarketCap = StockFormatters.formatMarketCap(item.marketCap, { currency: item.currency });
+
+        // Format price change with color
+        const priceChange = StockFormatters.formatPriceChange({ absolute: item.change, percentage: item.changePercent }, { colored: true, showSign: false, showChangeIcon: true, isDecimal: false });
 
         const row = document.createElement('tr');
         row.dataset.symbol = item.symbol;
@@ -36,12 +43,12 @@ class StocksTable {
             <td><span id="stock-rank-${item.symbol}" class="badge ${marketStatus === true ? 'bg-success' : 'bg-secondary'}">${index + 1}</span></td>
             <td>
                 ${item.market ? `<span id="stock-marketstatus-${item.symbol}" class="stock-market-status" data-market="${item.market}" data-market-status="${marketStatus}">${this.getMarketStatusIcon(marketStatus)}</span>` : ''}
-                <strong id="stock-symbol-${item.symbol}" class="stock-symbol" data-symbol="${item.symbol}">${item.symbol}</strong>
+                <strong id="stock-symbol-${item.symbol}" class="stock-symbol" data-symbol="${item.symbol}" title="Open Stock Page">${formattedSymbol}</strong>
             </td>
-            <td><span id="stock-name-${item.symbol}" class="text-truncate" title="${item.name}">${item.name}</span></td>
-            <td><strong id="stock-price-${item.symbol}" data-currency="${currencySymbol}">${item.price + currencySymbolDisplayFormat}</strong></td>
-            <td><span id="stock-change-${item.symbol}" class="${item.change >= 0 ? 'text-success' : 'text-danger'}" data-currency="${currencySymbol}">${item.change >= 0 ? '↗' : '↘'} ${Math.abs(item.change) + currencySymbolDisplayFormat} (${item.changePercent}%)</span></td>
-            <td><span id="stock-marketcap-${item.symbol}" data-currency="${currencySymbol}">${item.marketCap || 'N/A' + currencySymbolDisplayFormat}</span></td>
+            <td><span id="stock-name-${item.symbol}" class="text-truncate" title="${item.name}">${formattedName}</span></td>
+            <td><strong id="stock-price-${item.symbol}">${formattedPrice}</strong></td>
+            <td><span id="stock-change-${item.symbol}" class="${StockFormatters.getColorClass(priceChange.combined.color)}">${priceChange.combined.value}</span></td>
+            <td><span id="stock-marketcap-${item.symbol}" title="${item.marketCap}">${formattedMarketCap}</span></td>
             <td class="action-buttons">
             </td>
         `;
@@ -97,8 +104,8 @@ class StocksTable {
     getMarketStatusIcon(isOpen) {
         return isOpen === true ?
             '<i class="fas fa-circle text-success" title="Market Open"></i>' : isOpen === false ?
-                '<i class="fas fa-circle text-secondary" title="Market Closed"></i>' :
-                '<i class="fas fa-circle-question text-warning" title="Market Status Unknown"></i>';
+            '<i class="fas fa-circle text-secondary" title="Market Closed"></i>' :
+            '<i class="fas fa-circle-question text-warning" title="Market Status Unknown"></i>';
     }
 
     setupRowEventHandlers(row, item) {

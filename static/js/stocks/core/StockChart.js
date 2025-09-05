@@ -89,10 +89,10 @@ class StockChart {
             return;
         }
 
-        // Use metadata for chart configuration
-        const symbol = metadata.symbol || 'N/A';
-        const currency = metadata.currency === 'USD' ? '$' : metadata.currency === 'EUR' ? '€' : metadata.currency || '';
-        const period = metadata.period || 'N/A';
+        // Use metadata for chart configuration with StockFormatters
+        const symbol = StockFormatters.formatSymbol(metadata.symbol || 'N/A');
+        const currency = metadata.currency || 'USD';
+        const period = (metadata.period || 'N/A');
         const interval = metadata.interval;
         const ohlc = metadata.ohlc || false;
 
@@ -219,10 +219,7 @@ class StockChart {
                         grid: { color: 'rgba(0,0,0,0.1)' },
                         ticks: {
                             color: '#6c757d',
-                            callback: function(value) {
-                                const n = Number(value);
-                                return Number.isFinite(n) ? n.toFixed(2) + (currency.length > 1 ? ' ' : '') + currency : value;
-                            }
+                            callback: function(value) { return StockFormatters.formatPrice(value, { currency }); }
                         }
                     }
                 },
@@ -239,15 +236,7 @@ class StockChart {
 
     extendConfigForLine(baseConfig, chartData, prices, intervalMs, symbol, lineColor, fillColor) {
         const labels = chartData.map(point => {
-            const date = new Date(point.timestamp);
-            let dateOptions = { month: 'short', day: 'numeric' };
-            if (date.getFullYear() !== new Date().getFullYear()) dateOptions.year = 'numeric';
-            if (intervalMs && intervalMs < 24 * 60 * 60 * 1000) {
-                dateOptions.hour = '2-digit';
-                dateOptions.minute = '2-digit';
-                dateOptions.hour12 = false;
-            }
-            return date.toLocaleString('en-US', dateOptions);
+            return StockFormatters.formatDate(new Date(point.timestamp), { format: intervalMs && intervalMs < 24 * 60 * 60 * 1000 ? 'medium' : 'short' });
         });
 
         return {
@@ -281,7 +270,7 @@ class StockChart {
                         callbacks: {
                             label: function(context) {
                                 const currency = baseConfig.options.scales.y.title.text.match(/\(([^)]+)\)/)?.[1] || '';
-                                const price = context.parsed.y.toFixed(2) + (currency.length > 1 ? ' ' : '') + currency;
+                                const price = StockFormatters.formatPrice(context.parsed.y, { currency });
                                 return `${context.dataset.label}: ${price}`;
                             }
                         }
