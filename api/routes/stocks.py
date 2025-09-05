@@ -47,6 +47,40 @@ def register_stock_routes(app):
         except Exception as e:
             return jsonify({'error': f'Server error: {str(e)}'}), 500
 
+    @app.route('/api/stocks/popular/list')
+    def get_popular_stocks_list():
+        """Get list of popular stock symbols only or with basic info (name, price)"""
+        try:
+            symbols_only = request.args.get('symbols-only') is not None
+            top_param = request.args.get('top', default=10, type=int)
+            top, error = validate_top_stocks_count(top_param)
+
+            popular_symbols = stock_service.get_top_popular_stocks_list(top)
+
+            if isinstance(popular_symbols, tuple):
+                return popular_symbols
+            elif not popular_symbols:
+                return jsonify({'error': 'Failed to fetch popular stocks list'}), 500
+
+            # Return just the symbols list
+            if symbols_only:
+                return jsonify(popular_symbols)
+
+            # Return just the symbols list with basic info for dropdown
+            symbols_list = []
+            for symbol in popular_symbols:
+                basic_data = stock_service.get_stock_data(symbol)
+                if basic_data:
+                    symbols_list.append({
+                        'symbol': symbol,
+                        'name': basic_data.get('name', symbol),
+                        'price': basic_data.get('price', 0)
+                    })
+
+            return jsonify(symbols_list)
+        except Exception as e:
+            return jsonify({'error': f'Server error: {str(e)}'}), 500
+
     @app.route('/api/stock/<symbol>')
     def get_stock_info(symbol):
         """Get individual stock data"""

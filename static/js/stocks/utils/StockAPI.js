@@ -16,6 +16,11 @@ const API_ENDPOINTS = {
         url: '/api/stocks/popular',
         params: ['top']
     },
+    popularStocksList: {
+        method: 'GET',
+        url: '/api/stocks/popular/list',
+        params: ['top', 'symbols-only']
+    },
 
     // Individual Stock Data
     stockInfo: {
@@ -128,7 +133,8 @@ async function apiRequest(endpointKey, options = {}) {
             endpoint.params.forEach(param => {
                 const value = queryParams[param];
                 if (value !== undefined && value !== null) {
-                    if (param === 'data-only' && value) params.append('data-only', '');
+                    if (param === 'symbols-only' && value) params.append('symbols-only', '');
+                    else if (param === 'data-only' && value) params.append('data-only', '');
                     else if (param === 'ohlc' && value) params.append('ohlc', '');
                     else if (param === 'quarterly' && value) params.append('quarterly', '');
                     else params.append(param, value);
@@ -194,6 +200,18 @@ async function searchStocks(query) {
 async function getPopularStocks(top = 10) {
     return apiRequest('popularStocks', {
         queryParams: { top }
+    });
+}
+
+/**
+ * Get popular stocks list (symbols only or with basic info)
+ * @param {number} top - Number of top stocks to fetch (default 10)
+ * @param {boolean} symbolsOnly - Whether to return only symbols (default false)
+ * @returns {Promise<Array>} Array of popular stock symbols with basic info
+ */
+async function getPopularStocksList(top = 10, symbolsOnly = false) {
+    return apiRequest('popularStocksList', {
+        queryParams: { top, 'symbols-only': symbolsOnly }
     });
 }
 
@@ -367,6 +385,7 @@ window.StockAPI = {
     // Stock search and popular
     searchStocks,
     getPopularStocks,
+    getPopularStocksList,
 
     // Individual stock data
     getStock,
