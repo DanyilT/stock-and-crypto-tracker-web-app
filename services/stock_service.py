@@ -211,10 +211,6 @@ class StockService:
             Dictionary with 'currency' and 'data' (list of historical data points), or None if error
         """
         try:
-            if period not in Config.VALID_PERIODS or interval not in Config.VALID_INTERVALS:
-                print(f"Invalid period or interval. Valid periods: {Config.VALID_PERIODS}, Valid intervals: {Config.VALID_INTERVALS}")
-                return None
-
             ticker = yf.Ticker(symbol.upper())
 
             if start and end:
