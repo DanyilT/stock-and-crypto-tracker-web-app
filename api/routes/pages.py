@@ -18,6 +18,11 @@ def register_page_routes(app):
         top, _ = validate_top_stocks_count(top)  # Ensure top is between 1 and 100
         return render_template('stocks.html', top=top)
 
+    @app.route('/stocks/chart')
+    def stocks_chart():
+        """Stocks chart page with stock search and chart visualization"""
+        return render_template('charts.html')
+
     @app.route('/stock/<symbol>')
     def stock_detail(symbol):
         """Stock detail page"""
