@@ -1,3 +1,11 @@
+/**
+ * Market Trading Hours
+ * Provides comprehensive market hours information for US and EU markets
+ * including regular hours, pre-market, after-hours, holidays, and early closes.
+ * Also includes utility functions to check if the market is open for a given stock
+ * based on its market (US/EU) and the current date/time.
+ */
+
 // Regular market hours
 window.US_MARKET_HOURS = {
     REGULAR_OPEN: { hour: 9, minute: 30 },      // 9:30 AM ET
