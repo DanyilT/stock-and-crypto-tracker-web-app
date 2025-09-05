@@ -8,7 +8,7 @@ class StockService:
     def __init__(self):
         self.cache = CacheService()
 
-    def get_popular_stocks(self, top=10):
+    def get_top_popular_stocks_list(self, top=10):
         """Get top market cap companies with caching"""
         return self.cache.get_or_fetch_popular_stocks(top)
 
@@ -90,111 +90,6 @@ class StockService:
             print(f"Error fetching stock data for {symbol}: {e}")
             return None
 
-    def get_multiple_stocks_data(self, symbols, period='1mo', interval='1d'):
-        """
-        Get data for multiple stocks at once using yfinance download
-
-        Args:
-            symbols: List of stock symbols or space-separated string
-            period: Time period for historical data
-            interval: Data interval
-
-        Returns:
-            Dictionary with stock data for each symbol
-        """
-        try:
-            # Handle both list and string inputs
-            if isinstance(symbols, str):
-                symbols_list = symbols.upper().split()
-            else:
-                symbols_list = [symbol.upper() for symbol in symbols]
-
-            if not symbols_list:
-                return {}
-
-            # Download historical data for all symbols at once
-            data = yf.download(symbols_list, period=period, interval=interval, group_by='ticker', progress=False)
-
-            # Get current info for each stock
-            result = {}
-
-            for symbol in symbols_list:
-                try:
-                    # Get current stock info
-                    ticker = yf.Ticker(symbol)
-                    info = ticker.info
-
-                    current_price = info.get('regularMarketPrice') or info.get('currentPrice')
-                    if not current_price:
-                        continue
-
-                    # Prepare stock data
-                    stock_data = {
-                        'symbol': symbol,
-                        'name': info.get('longName') or symbol,
-                        'price': round(float(current_price), 2),
-                        'currency': info.get('currency', 'USD'),
-                        'exchange': info.get('exchange', 'N/A'),
-                        'marketCap': info.get('marketCap', 0),
-                        'volume': info.get('volume', 0),
-                        'sector': info.get('sector', 'N/A'),
-                        'industry': info.get('industry', 'N/A'),
-                        'historicalData': []
-                    }
-
-                    # Add change calculation
-                    previous_close = info.get('previousClose', current_price)
-                    change = current_price - previous_close
-                    stock_data['change'] = round(float(change), 2)
-                    stock_data['changePercent'] = round(float((change / previous_close) * 100 if previous_close else 0), 2)
-
-                    # Process historical data if available
-                    if len(symbols_list) == 1:
-                        # Single symbol case
-                        hist_data = data
-                    else:
-                        # Multiple symbols case
-                        try:
-                            hist_data = data[symbol] if symbol in data.columns.levels[0] else pd.DataFrame()
-                        except:
-                            hist_data = pd.DataFrame()
-
-                    if not hist_data.empty:
-                        historical_points = []
-                        for date, row in hist_data.iterrows():
-                            if pd.notna(row.get('Close', 0)):
-                                historical_points.append({
-                                    'date': date.strftime('%Y-%m-%d'),
-                                    'price': round(float(row['Close']), 2),
-                                    'volume': int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0,
-                                    'high': round(float(row.get('High', 0)), 2) if pd.notna(row.get('High', 0)) else None,
-                                    'low': round(float(row.get('Low', 0)), 2) if pd.notna(row.get('Low', 0)) else None,
-                                    'open': round(float(row.get('Open', 0)), 2) if pd.notna(row.get('Open', 0)) else None
-                                })
-
-                        stock_data['historicalData'] = historical_points
-
-                    result[symbol] = stock_data
-
-                except Exception as e:
-                    print(f"Error processing data for {symbol}: {e}")
-                    continue
-
-            return {
-                'stocks': result,
-                'metadata': {
-                    'period': period,
-                    'interval': interval,
-                    'symbolsRequested': symbols_list,
-                    'symbolsReturned': list(result.keys()),
-                    'lastUpdated': datetime.now().isoformat()
-                }
-            }
-
-        except Exception as e:
-            print(f"Error fetching multiple stocks data: {e}")
-            return {}
-
     def get_historical_data(self, symbol, period='1mo', start=None, end=None, interval='1d', ohlc=False):
         """
         Get stock historical data
@@ -247,7 +142,8 @@ class StockService:
                     'period': f'{start} to {end}' if start and end else period,
                     'interval': interval,
                     'currency': ticker.info.get('currency', 'USD'),
-                    'ohlc': ohlc
+                    'ohlc': ohlc,
+                    'lastUpdated': datetime.now().isoformat()
                 }
             }
 
@@ -794,3 +690,20 @@ class StockService:
         except Exception as e:
             print(f"Error fetching market indices: {e}")
             return {}
+
+    def _get_market_summary(self, indices_data):
+        """Generate market summary from indices data"""
+        if not indices_data:
+            return {}
+
+        up_count = sum(1 for data in indices_data.values() if data.get('change', 0) > 0)
+        down_count = sum(1 for data in indices_data.values() if data.get('change', 0) < 0)
+        unchanged_count = len(indices_data) - up_count - down_count
+
+        return {
+            'totalIndices': len(indices_data),
+            'marketsUp': up_count,
+            'marketsDown': down_count,
+            'marketsUnchanged': unchanged_count,
+            'marketSentiment': 'bullish' if up_count > down_count else 'bearish' if down_count > up_count else 'neutral'
+        }

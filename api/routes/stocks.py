@@ -25,7 +25,7 @@ def register_stock_routes(app):
             top_param = request.args.get('top', default=10, type=int)
             top, error = validate_top_stocks_count(top_param)
 
-            popular_symbols = stock_service.get_popular_stocks(top)
+            popular_symbols = stock_service.get_top_popular_stocks_list(top)
 
             if isinstance(popular_symbols, tuple):
                 return popular_symbols
@@ -46,41 +46,6 @@ def register_stock_routes(app):
             return jsonify(stocks_data)
         except Exception as e:
             return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-    @app.route('/api/stocks/bulk')
-    def get_multiple_stocks_route():
-        """Get data for multiple stocks at once"""
-        try:
-            symbols = request.args.get('symbols', '')
-            if not symbols:
-                return jsonify({'error': 'Symbols parameter is required'}), 400
-
-            period = request.args.get('period', '1mo')
-            interval = request.args.get('interval', '1d')
-
-            # Validate period and interval
-            is_valid, error_msg = validate_period(period)
-            if not is_valid:
-                return jsonify({'error': error_msg}), 400
-
-            is_valid, error_msg = validate_interval(interval)
-            if not is_valid:
-                return jsonify({'error': error_msg}), 400
-
-            # Limit number of symbols to prevent abuse
-            symbols_list = symbols.upper().split()
-            if len(symbols_list) > 50:  # Max 50 symbols at once
-                return jsonify({'error': 'Too many symbols. Maximum 50 symbols allowed.'}), 400
-
-            bulk_data = stock_service.get_multiple_stocks_data(symbols_list, period=period, interval=interval)
-
-            if not bulk_data or not bulk_data.get('stocks'):
-                return jsonify({'error': 'No data available for the requested symbols'}), 404
-
-            return jsonify(bulk_data)
-
-        except Exception as e:
-            return jsonify({'error': f'Error fetching bulk stock data: {str(e)}'}), 500
 
     @app.route('/api/stock/<symbol>')
     def get_stock_info(symbol):
@@ -197,21 +162,6 @@ def register_stock_routes(app):
         except Exception as e:
             return jsonify({'error': f'Error fetching news: {str(e)}'}), 500
 
-    @app.route('/api/market/news')
-    def get_market_news():
-        """Get general market news"""
-        try:
-            limit = request.args.get('limit', default=20, type=int)
-            limit = min(max(limit, 1), 100)  # Between 1 and 100
-
-            category = request.args.get('category', 'general')
-
-            news = stock_service.get_market_news(limit=limit, category=category)
-            return jsonify(news)
-
-        except Exception as e:
-            return jsonify({'error': f'Error fetching market news: {str(e)}'}), 500
-
     @app.route('/api/stock/<symbol>/dividends')
     def get_dividend_history(symbol):
         """Get dividend payment history"""
@@ -287,3 +237,18 @@ def register_stock_routes(app):
 
         except Exception as e:
             return jsonify({'error': f'Error fetching market indices: {str(e)}'}), 500
+
+    @app.route('/api/market/news')
+    def get_market_news():
+        """Get general market news"""
+        try:
+            limit = request.args.get('limit', default=20, type=int)
+            limit = min(max(limit, 1), 100)  # Between 1 and 100
+
+            category = request.args.get('category', 'general')
+
+            news = stock_service.get_market_news(limit=limit, category=category)
+            return jsonify(news)
+
+        except Exception as e:
+            return jsonify({'error': f'Error fetching market news: {str(e)}'}), 500
