@@ -112,10 +112,13 @@ def register_stock_routes(app):
             # Add historical data for mini chart
             period = request.args.get('period', '1mo')
             is_valid, _ = validate_period(period)
-            if not is_valid:
-                period = '1mo'  # fallback to default
+            if not is_valid: period = '1mo'  # fallback to default
 
-            historical_data = stock_service.get_historical_data(symbol, period=period)
+            interval = request.args.get('interval', '1d')
+            is_valid, _ = validate_interval(interval)
+            if not is_valid: interval = '1d'  # fallback to default
+
+            historical_data = stock_service.get_historical_data(symbol, period=period, interval=interval, ohlc=request.args.get('ohlc') is not None)
             if historical_data is not None:
                 data['historicalData'] = historical_data
             else:
@@ -149,19 +152,6 @@ def register_stock_routes(app):
         except Exception as e:
             return jsonify({'error': f'Error fetching stock splits: {str(e)}'}), 500
 
-    @app.route('/api/stock/<symbol>/news')
-    def get_stock_news(symbol):
-        """Get recent news for a stock"""
-        try:
-            limit = request.args.get('limit', default=10, type=int)
-            limit = min(max(limit, 1), 50)  # Between 1 and 50
-
-            news = stock_service.get_stock_news(symbol.upper(), limit=limit)
-            return jsonify(news)
-
-        except Exception as e:
-            return jsonify({'error': f'Error fetching news: {str(e)}'}), 500
-
     @app.route('/api/stock/<symbol>/dividends')
     def get_dividend_history(symbol):
         """Get dividend payment history"""
@@ -177,19 +167,6 @@ def register_stock_routes(app):
 
         except Exception as e:
             return jsonify({'error': f'Error fetching dividend history: {str(e)}'}), 500
-
-    @app.route('/api/stock/<symbol>/holders')
-    def get_institutional_holders(symbol):
-        """Get institutional ownership information"""
-        try:
-            holders = stock_service.get_institutional_holders(symbol.upper())
-            if not holders:
-                return jsonify({'error': f'No institutional holder data available for {symbol.upper()}'}), 404
-
-            return jsonify(holders)
-
-        except Exception as e:
-            return jsonify({'error': f'Error fetching institutional holders: {str(e)}'}), 500
 
     @app.route('/api/stock/<symbol>/financials')
     def get_financial_statements(symbol):
@@ -212,6 +189,19 @@ def register_stock_routes(app):
         except Exception as e:
             return jsonify({'error': f'Error fetching financial statements: {str(e)}'}), 500
 
+    @app.route('/api/stock/<symbol>/holders')
+    def get_institutional_holders(symbol):
+        """Get institutional ownership information"""
+        try:
+            holders = stock_service.get_institutional_holders(symbol.upper())
+            if not holders:
+                return jsonify({'error': f'No institutional holder data available for {symbol.upper()}'}), 404
+
+            return jsonify(holders)
+
+        except Exception as e:
+            return jsonify({'error': f'Error fetching institutional holders: {str(e)}'}), 500
+
     @app.route('/api/stock/<symbol>/options')
     def get_options_data(symbol):
         """Get options chain data"""
@@ -224,6 +214,19 @@ def register_stock_routes(app):
 
         except Exception as e:
             return jsonify({'error': f'Error fetching options data: {str(e)}'}), 500
+
+    @app.route('/api/stock/<symbol>/news')
+    def get_stock_news(symbol):
+        """Get recent news for a stock"""
+        try:
+            limit = request.args.get('limit', default=10, type=int)
+            limit = min(max(limit, 1), 50)  # Between 1 and 50
+
+            news = stock_service.get_stock_news(symbol.upper(), limit=limit)
+            return jsonify(news)
+
+        except Exception as e:
+            return jsonify({'error': f'Error fetching news: {str(e)}'}), 500
 
     @app.route('/api/market/indices')
     def get_market_indices_route():
