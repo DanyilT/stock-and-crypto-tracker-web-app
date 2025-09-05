@@ -1,21 +1,189 @@
 /**
+ * Stock API Utility - Unified API request system
+ * Contains all available API endpoints and a single request function
+ */
+
+// API Endpoints Configuration
+const API_ENDPOINTS = {
+    // Stock Search & Popular
+    stockSearch: {
+        method: 'GET',
+        url: '/api/stocks/search',
+        params: ['q']
+    },
+    popularStocks: {
+        method: 'GET',
+        url: '/api/stocks/popular',
+        params: ['top']
+    },
+
+    // Individual Stock Data
+    stockInfo: {
+        method: 'GET',
+        url: '/api/stock/{symbol}',
+        pathParams: ['symbol']
+    },
+    stockHistory: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/history',
+        pathParams: ['symbol'],
+        params: ['period', 'start', 'end', 'interval', 'ohlc', 'data-only']
+    },
+    stockDetails: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/details',
+        pathParams: ['symbol'],
+        params: ['period', 'interval', 'ohlc']
+    },
+    stockQuote: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/quote',
+        pathParams: ['symbol']
+    },
+
+    // Stock Historical & Financial Data
+    stockSplits: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/splits',
+        pathParams: ['symbol']
+    },
+    stockDividends: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/dividends',
+        pathParams: ['symbol'],
+        params: ['period']
+    },
+    stockFinancials: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/financials',
+        pathParams: ['symbol'],
+        params: ['type', 'quarterly']
+    },
+
+    // Stock Additional Data
+    stockHolders: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/holders',
+        pathParams: ['symbol']
+    },
+    stockOptions: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/options',
+        pathParams: ['symbol']
+    },
+    stockNews: {
+        method: 'GET',
+        url: '/api/stock/{symbol}/news',
+        pathParams: ['symbol'],
+        params: ['limit']
+    },
+
+    // Market Data
+    marketIndices: {
+        method: 'GET',
+        url: '/api/market/indices'
+    },
+    marketNews: {
+        method: 'GET',
+        url: '/api/market/news',
+        params: ['limit', 'category']
+    }
+};
+
+
+/**
+ * Unified API request function
+ * @param {string} endpointKey - Key from API_ENDPOINTS
+ * @param {Object} options - Request options
+ * @param {Object} options.pathParams - Path parameters (e.g., {symbol: 'AAPL'})
+ * @param {Object} options.queryParams - Query parameters (e.g., {period: '1mo'})
+ * @param {Object} options.fetchOptions - Additional fetch options
+ * @returns {Promise<any>} API response data
+ */
+async function apiRequest(endpointKey, options = {}) {
+    try {
+        const endpoint = API_ENDPOINTS[endpointKey];
+        if (!endpoint) throw new Error(`Unknown endpoint: ${endpointKey}`);
+
+        const {
+            pathParams = {},
+            queryParams = {},
+            fetchOptions = {}
+        } = options;
+
+        // Build URL with path parameters
+        let url = endpoint.url;
+        if (endpoint.pathParams) {
+            endpoint.pathParams.forEach(param => {
+                const value = pathParams[param];
+                if (value !== undefined && value !== null) {
+                    url = url.replace(`{${param}}`, encodeURIComponent(formatSymbol(value)));
+                }
+            });
+        }
+
+        // Build query string
+        const params = new URLSearchParams();
+        if (endpoint.params && queryParams) {
+            endpoint.params.forEach(param => {
+                const value = queryParams[param];
+                if (value !== undefined && value !== null) {
+                    if (param === 'data-only' && value) params.append('data-only', '');
+                    else if (param === 'ohlc' && value) params.append('ohlc', '');
+                    else if (param === 'quarterly' && value) params.append('quarterly', '');
+                    else params.append(param, value);
+                }
+            });
+        }
+
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
+        // Default fetch options
+        const defaultOptions = {
+            method: endpoint.method,
+            headers: { 'Content-Type': 'application/json' },
+        };
+
+        const response = await fetch(url, { ...defaultOptions, ...fetchOptions });
+        if (!response.ok) throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+
+        return await response.json();
+    } catch (error) {
+        console.error(`API request error for ${endpointKey}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Batch request multiple endpoints
+ * @param {Array} requests - Array of request objects {endpoint, options}
+ * @returns {Promise<Array>} Array of responses
+ */
+async function batchApiRequest(requests) {
+    try {
+        const promises = requests.map(req => apiRequest(req.endpoint, req.options).catch(error => ({ error: error.message })));
+        return await Promise.all(promises);
+    } catch (error) {
+        console.error('Batch API request error:', error);
+        throw error;
+    }
+}
+
+
+// Individual API functions for each endpoint
+
+/**
  * Search for stocks by symbol or name
  * @param {string} query - Search query (stock symbol or company name)
  * @returns {Promise<Object|Array>} Stock data or array of stock data
  */
 async function searchStocks(query) {
-    try {
-        const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
-
-        if (!response.ok) {
-            throw new Error(`Search failed: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Stock search error:', error);
-        throw error;
-    }
+    return apiRequest('stockSearch', {
+        queryParams: { q: query }
+    });
 }
 
 /**
@@ -24,18 +192,9 @@ async function searchStocks(query) {
  * @returns {Promise<Array>} Array of popular stock data
  */
 async function getPopularStocks(top = 10) {
-    try {
-        const response = await fetch(`/api/stocks/popular?top=${top}`);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch popular stocks: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Popular stocks error:', error);
-        throw error;
-    }
+    return apiRequest('popularStocks', {
+        queryParams: { top }
+    });
 }
 
 /**
@@ -44,18 +203,9 @@ async function getPopularStocks(top = 10) {
  * @returns {Promise<Object>} Stock data
  */
 async function getStock(symbol) {
-    try {
-        const response = await fetch(`/api/stock/${symbol}`);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch stock ${symbol}: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Stock data error:', error);
-        throw error;
-    }
+    return apiRequest('stockInfo', {
+        pathParams: { symbol }
+    });
 }
 
 /**
@@ -65,84 +215,103 @@ async function getStock(symbol) {
  * @returns {Promise<Object>} Historical data
  */
 async function getStockHistory(symbol, options = {}) {
-    try {
-        const params = new URLSearchParams();
+    const queryParams = { ...options };
 
-        // Add options as query parameters
-        Object.keys(options).forEach(key => {
-            if (options[key] !== undefined && options[key] !== null) {
-                if (key === 'dataOnly' && options[key]) {
-                    params.append('data-only', '');
-                } else {
-                    params.append(key, options[key]);
-                }
-            }
-        });
-
-        const queryString = params.toString();
-        const url = `/api/stock/${symbol}/history${queryString ? `?${queryString}` : ''}`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch stock history for ${symbol}: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Stock history error:', error);
-        throw error;
+    // Handle dataOnly parameter conversion
+    if (options.dataOnly) {
+        queryParams['data-only'] = true;
+        delete queryParams.dataOnly;
     }
+
+    return apiRequest('stockHistory', {
+        pathParams: { symbol },
+        queryParams
+    });
 }
 
 /**
  * Get comprehensive stock details
  * @param {string} symbol - Stock symbol
- * @param {string} period - Period for historical data (optional)
+ * @param {string} options - Options for historical data (period, interval, ohlc)
  * @returns {Promise<Object>} Detailed stock data
  */
-// async function getStockDetails(symbol, period = '1mo') {
-//     try {
-//         const params = new URLSearchParams();
-//         if (period) {
-//             params.append('period', period);
-//         }
-//
-//         const queryString = params.toString();
-//         const url = `/api/stock/${symbol}/details${queryString ? `?${queryString}` : ''}`;
-//
-//         const response = await fetch(url);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch stock details for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Stock details error:', error);
-//         throw error;
-//     }
-// }
+async function getStockDetails(symbol, options = {}) {
+    return apiRequest('stockDetails', {
+        pathParams: { symbol },
+        queryParams: { ...options }
+    });
+}
 
 /**
  * Get stock quote (real-time price data)
  * @param {string} symbol - Stock symbol
  * @returns {Promise<Object>} Real-time quote data
  */
-// async function getQuote(symbol) {
-//     try {
-//         const response = await fetch(`/api/stock/${symbol}/quote`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch quote for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Stock quote error:', error);
-//         throw error;
-//     }
-// }
+async function getQuote(symbol) {
+    return apiRequest('stockQuote', {
+        pathParams: { symbol }
+    });
+}
+
+/**
+ * Get stock splits history
+ * @param {string} symbol - Stock symbol
+ * @returns {Promise<Array>} Stock splits data
+ */
+async function getStockSplits(symbol) {
+    return apiRequest('stockSplits', {
+        pathParams: { symbol }
+    });
+}
+
+/**
+ * Get stock dividend history
+ * @param {string} symbol - Stock symbol
+ * @param {string} period - Period for dividends (1y, 3y, 5y, max)
+ * @returns {Promise<Array>} Dividend history data
+ */
+async function getStockDividends(symbol, period = '5y') {
+    return apiRequest('stockDividends', {
+        pathParams: { symbol },
+        queryParams: { period }
+    });
+}
+
+/**
+ * Get stock financial statements
+ * @param {string} symbol - Stock symbol
+ * @param {string} type - Financial type ('income', 'balance', 'cashflow')
+ * @param {boolean} quarterly - Whether to get quarterly data
+ * @returns {Promise<Object>} Financial data
+ */
+async function getStockFinancials(symbol, type = 'income', quarterly = false) {
+    return apiRequest('stockFinancials', {
+        pathParams: { symbol },
+        queryParams: { type, quarterly }
+    });
+}
+
+/**
+ * Get institutional holders data
+ * @param {string} symbol - Stock symbol
+ * @returns {Promise<Object>} Institutional holders data
+ */
+async function getStockHolders(symbol) {
+    return apiRequest('stockHolders', {
+        pathParams: { symbol }
+    });
+}
+
+/**
+ * Get stock options data
+ * @param {string} symbol - Stock symbol
+ * @returns {Promise<Object>} Options data
+ */
+async function getStockOptions(symbol) {
+    return apiRequest('stockOptions', {
+        pathParams: { symbol }
+    });
+}
 
 /**
  * Get stock news
@@ -150,20 +319,20 @@ async function getStockHistory(symbol, options = {}) {
  * @param {number} limit - Number of news articles to fetch (default 10)
  * @returns {Promise<Array>} Array of news articles
  */
-// async function getStockNews(symbol, limit = 10) {
-//     try {
-//         const response = await fetch(`/api/stock/${symbol}/news?limit=${limit}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch news for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Stock news error:', error);
-//         throw error;
-//     }
-// }
+async function getStockNews(symbol, limit = 10) {
+    return apiRequest('stockNews', {
+        pathParams: { symbol },
+        queryParams: { limit }
+    });
+}
+
+/**
+ * Get market indices (S&P 500, NASDAQ, DOW, etc.)
+ * @returns {Promise<Object>} Market indices data
+ */
+async function getMarketIndices() {
+    return apiRequest('marketIndices');
+}
 
 /**
  * Get market news
@@ -171,282 +340,57 @@ async function getStockHistory(symbol, options = {}) {
  * @param {string} category - News category (optional)
  * @returns {Promise<Array>} Array of market news articles
  */
-// async function getMarketNews(limit = 20, category = null) {
-//     try {
-//         const params = new URLSearchParams({ limit });
-//         if (category) {
-//             params.append('category', category);
-//         }
-//
-//         const response = await fetch(`/api/market/news?${params.toString()}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch market news: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Market news error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get market indices (S&P 500, NASDAQ, DOW, etc.)
- * @param {Array<string>} indices - Array of index symbols (default: major indices)
- * @returns {Promise<Object>} Market indices data
- */
-// async function getMarketIndices(indices = ['^GSPC', '^IXIC', '^DJI']) {
-//     try {
-//         const symbolsParam = indices.join(',');
-//         const response = await fetch(`/api/market/indices?symbols=${encodeURIComponent(symbolsParam)}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch market indices: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Market indices error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get stock financials (income statement, balance sheet, cash flow)
- * @param {string} symbol - Stock symbol
- * @param {string} type - Financial type ('income', 'balance', 'cashflow', 'all')
- * @returns {Promise<Object>} Financial data
- */
-// async function getStockFinancials(symbol, type = 'all') {
-//     try {
-//         const response = await fetch(`/api/stock/${symbol}/financials?type=${type}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch financials for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Stock financials error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get stock options data
- * @param {string} symbol - Stock symbol
- * @param {string} expiration - Expiration date (YYYY-MM-DD format, optional)
- * @returns {Promise<Object>} Options data
- */
-// async function getStockOptions(symbol, expiration = null) {
-//     try {
-//         const params = expiration ? `?expiration=${expiration}` : '';
-//         const response = await fetch(`/api/stock/${symbol}/options${params}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch options for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Stock options error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get sector performance
- * @returns {Promise<Array>} Array of sector performance data
- */
-// async function getSectorPerformance() {
-//     try {
-//         const response = await fetch('/api/market/sectors');
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch sector performance: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Sector performance error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get trending stocks
- * @param {string} region - Region (US, EU, etc.)
- * @param {number} limit - Number of trending stocks (default 10)
- * @returns {Promise<Array>} Array of trending stocks
- */
-// async function getTrendingStocks(region = 'US', limit = 10) {
-//     try {
-//         const response = await fetch(`/api/stocks/trending?region=${region}&limit=${limit}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch trending stocks: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Trending stocks error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get gainers and losers
- * @param {string} type - Type ('gainers', 'losers', 'active')
- * @param {number} limit - Number of stocks (default 10)
- * @returns {Promise<Array>} Array of stocks
- */
-// async function getGainersLosers(type = 'gainers', limit = 10) {
-//     try {
-//         const response = await fetch(`/api/stocks/${type}?limit=${limit}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch ${type}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error(`${type} error:`, error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get stock recommendations/analyst ratings
- * @param {string} symbol - Stock symbol
- * @returns {Promise<Object>} Analyst recommendations
- */
-// async function getAnalystRecommendations(symbol) {
-//     try {
-//         const response = await fetch(`/api/stock/${symbol}/recommendations`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch recommendations for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Analyst recommendations error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get stock earnings data
- * @param {string} symbol - Stock symbol
- * @param {boolean} calendar - Whether to get earnings calendar (default false)
- * @returns {Promise<Object>} Earnings data
- */
-// async function getEarnings(symbol, calendar = false) {
-//     try {
-//         const endpoint = calendar ? 'earnings-calendar' : 'earnings';
-//         const response = await fetch(`/api/stock/${symbol}/${endpoint}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch earnings for ${symbol}: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Earnings error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Get market calendar (holidays, trading hours)
- * @param {string} market - Market (US, EU, etc.)
- * @param {number} year - Year (optional, defaults to current year)
- * @returns {Promise<Object>} Market calendar data
- */
-// async function getMarketCalendar(market = 'US', year = new Date().getFullYear()) {
-//     try {
-//         const response = await fetch(`/api/market/calendar?market=${market}&year=${year}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch market calendar: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Market calendar error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Check if market is open
- * @param {string} market - Market (US, EU, etc.)
- * @returns {Promise<Object>} Market status
- */
-// async function getMarketStatus(market = 'US') {
-//     try {
-//         const response = await fetch(`/api/market/status?market=${market}`);
-//
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch market status: ${response.status}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('Market status error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Generic API helper for custom endpoints
- * @param {string} endpoint - API endpoint
- * @param {Object} options - Fetch options
- * @returns {Promise<any>} API response
- */
-// async function apiRequest(endpoint, options = {}) {
-//     try {
-//         const defaultOptions = {
-//             method: 'GET',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//             },
-//         };
-//
-//         const response = await fetch(endpoint, { ...defaultOptions, ...options });
-//
-//         if (!response.ok) {
-//             throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-//         }
-//
-//         return await response.json();
-//     } catch (error) {
-//         console.error('API request error:', error);
-//         throw error;
-//     }
-// }
-
-/**
- * Validate stock symbol format
- * @param {string} symbol - Stock symbol to validate
- * @returns {boolean} Whether symbol is valid
- */
-function validateSymbol(symbol) {
-    if (!symbol || typeof symbol !== 'string') {
-        return false;
-    }
-
-    // Basic validation: 1-5 characters, letters/numbers/dots/hyphens
-    const symbolRegex = /^[A-Z0-9.-]{1,5}$/i;
-    return symbolRegex.test(symbol.trim());
+async function getMarketNews(limit = 20, category = 'general') {
+    return apiRequest('marketNews', {
+        queryParams: { limit, category }
+    });
 }
 
+
+// Utility functions
+
 /**
- * Format symbol for API calls (uppercase, trimmed)
- * @param {string} symbol - Stock symbol
- * @returns {string} Formatted symbol
+ * Get all available API endpoints
+ * @returns {Object} Available endpoints configuration
  */
-function formatSymbol(symbol) {
-    return symbol ? symbol.toString().toUpperCase().trim() : '';
+function getAvailableEndpoints() {
+    return { ...API_ENDPOINTS };
 }
+
+
+// Export all functions for use in other modules
+window.StockAPI = {
+    // Core API function
+    apiRequest,
+    batchApiRequest,
+
+    // Stock search and popular
+    searchStocks,
+    getPopularStocks,
+
+    // Individual stock data
+    getStock,
+    getStockHistory,
+    getStockDetails,
+    getQuote,
+
+    // Stock financial data
+    getStockSplits,
+    getStockDividends,
+    getStockFinancials,
+
+    // Stock additional data
+    getStockHolders,
+    getStockOptions,
+    getStockNews,
+
+    // Market data
+    getMarketIndices,
+    getMarketNews,
+
+    // Utilities
+    getAvailableEndpoints,
+
+    // Direct access to endpoints config
+    endpoints: API_ENDPOINTS
+};
