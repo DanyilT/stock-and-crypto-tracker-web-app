@@ -25,6 +25,9 @@ class ChartPage {
             customDateRangeId: 'custom-date-range',
             startDateId: 'start-date',
             endDateId: 'end-date',
+
+            fullscreenChartBtnId: 'fullscreen-chart-btn',
+            exportChartBtnId: 'export-chart-btn'
         };
 
         this.currentSymbol = null;
@@ -74,6 +77,10 @@ class ChartPage {
         this.customDateRange = document.getElementById(this.elements.customDateRangeId);
         this.startDate = document.getElementById(this.elements.startDateId);
         this.endDate = document.getElementById(this.elements.endDateId);
+
+        // Chart action buttons
+        this.fullscreenChartBtn = document.getElementById(this.elements.fullscreenChartBtnId);
+        this.exportChartBtn = document.getElementById(this.elements.exportChartBtnId);
     }
 
     setupEventListeners() {
@@ -139,6 +146,16 @@ class ChartPage {
         });
         this.endDate.addEventListener('change', () => {
             if (this.startDate.value && this.endDate.value) this.updateChart({ start: this.startDate.value, end: this.endDate.value });
+        });
+
+        // Fullscreen chart button
+        this.fullscreenChartBtn.addEventListener('click', () => {
+            if (this.chart) new ChartFullscreenHelper(this.chartContainer, this.chart).enter();
+        });
+
+        // Export chart button
+        this.exportChartBtn.addEventListener('click', (e) => {
+            if (this.chart) new ChartExportMenuHelper(this.exportChartBtn, new ChartExportHelper(this.chart)).show(e);
         });
     }
 
@@ -275,6 +292,9 @@ class ChartPage {
         this.chartControls.style.display = 'none';
         this.loadChartBtn.disabled = true;
 
+        this.fullscreenChartBtn.style.display = 'none';
+        this.exportChartBtn.style.display = 'none';
+
         // Clear chart
         if (this.chart) {
             this.chartContainer.innerHTML = `
@@ -300,6 +320,10 @@ class ChartPage {
         // Update chart title and show controls
         this.chartTitle.textContent = `${symbol} Chart`;
         this.chartControls.style.display = 'flex';
+
+        // Show action buttons
+        this.fullscreenChartBtn.style.display = '';
+        this.exportChartBtn.style.display = '';
 
         // Prepare chart parameters
         let options = {
