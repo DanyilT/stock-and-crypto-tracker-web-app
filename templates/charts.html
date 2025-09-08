@@ -87,82 +87,7 @@
     </div>
 
     <!-- Chart Section -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i><span id="chart-title">Stock Chart</span></h5>
-            <!-- Chart Controls -->
-            <div id="chart-controls" class="d-flex gap-2 align-items-center" style="display: none !important;">
-                <!-- Chart Type -->
-                <div class="d-flex align-items-center gap-1">
-                    <label class="form-label small mb-0 text-nowrap" for="chart-type-select">Type:</label>
-                    <select class="form-select form-select-sm" id="chart-type-select" style="width: auto;">
-                        <option value="line">Line</option>
-                        <option value="line-filled">Area</option>
-                        <option value="candlestick">Candlestick</option>
-                    </select>
-                </div>
-
-                <!-- Period -->
-                <div class="d-flex align-items-center gap-1">
-                    <label class="form-label small mb-0 text-nowrap" for="period-select">Period:</label>
-                    <select class="form-select form-select-sm" id="period-select" style="width: auto;">
-                        <option value="1d">1 Day</option>
-                        <option value="5d">5 Days</option>
-                        <option value="1mo" selected>1 Month</option>
-                        <option value="3mo">3 Months</option>
-                        <option value="6mo">6 Months</option>
-                        <option value="1y">1 Year</option>
-                        <option value="2y">2 Years</option>
-                        <option value="5y">5 Years</option>
-                        <option value="10y">10 Years</option>
-                        <option value="ytd">From Year Start</option>
-                        <option value="max">Max</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-
-                <!-- Interval -->
-                <div class="d-flex align-items-center gap-1">
-                    <label class="form-label small mb-0 text-nowrap" for="interval-select">Interval:</label>
-                    <select class="form-select form-select-sm" id="interval-select" style="width: auto;">
-                        <option value="1m">1min</option>
-                        <option value="2m">2min</option>
-                        <option value="5m">5min</option>
-                        <option value="15m">15min</option>
-                        <option value="30m">30min</option>
-                        <option value="60m">60min</option>
-                        <option value="90m">90min</option>
-                        <option value="1h">1hr</option>
-                        <option value="1d" selected>1day</option>
-                        <option value="5d">5day</option>
-                        <option value="1wk">1wk</option>
-                        <option value="1mo">1mo</option>
-                        <option value="3mo">3mo</option>
-                    </select>
-                </div>
-
-                <!-- Custom Date Range (hidden by default) -->
-                <div id="custom-date-range" class="align-items-center gap-1" style="display: none;">
-                    <input type="date" class="form-control form-control-sm" id="start-date" style="width: 130px;">
-                    <span class="text-muted">to</span>
-                    <input type="date" class="form-control form-control-sm" id="end-date" style="width: 130px;">
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <!-- Chart Container -->
-            <div id="chart-container" style="height: 500px; min-height: 400px;">
-                <!-- Initial state -->
-                <div class="d-flex justify-content-center align-items-center h-100 text-muted">
-                    <div class="text-center">
-                        <i class="fas fa-chart-area fa-3x mb-3 opacity-50"></i>
-                        <h5>Select a stock to view its chart</h5>
-                        <p class="mb-0">Use the search box or dropdown above to choose a stock</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include "partials/asset_chart.html" %}
 </div>
 {% endblock %}
 
@@ -178,8 +103,6 @@
 <script src="{{ url_for('static', filename='js/stocks/chart/ChartPage.js') }}"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    new ChartPage();
-});
+document.addEventListener('DOMContentLoaded', () => new ChartPage());
 </script>
 {% endblock %}
