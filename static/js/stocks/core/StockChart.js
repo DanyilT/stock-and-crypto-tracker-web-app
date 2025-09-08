@@ -73,6 +73,7 @@ class StockChart {
      */
     setChartType(chartType) {
         this.chartType = chartType;
+        if (chartType === 'candlestick') this.options.ohlc = true;
         this.render();
     }
 
