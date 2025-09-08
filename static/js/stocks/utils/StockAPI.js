@@ -211,7 +211,7 @@ async function getPopularStocks(top = 10) {
  */
 async function getPopularStocksList(top = 10, symbolsOnly = false) {
     return apiRequest('popularStocksList', {
-        queryParams: { top, 'symbols-only': symbolsOnly }
+        queryParams: symbolsOnly ? { top, 'symbols-only': true } : { top }
     });
 }
 
