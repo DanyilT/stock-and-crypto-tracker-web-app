@@ -1,4 +1,16 @@
 class StockChart {
+    /**
+     * Initialize StockChart instance
+     * @param containerId - ID of the container element to render the chart in
+     * @param symbol - Stock symbol to display
+     * @param options - Chart options (chartType, period, interval, start, end, ohlc)
+     * @param options.chartType - 'line', 'line-filled', 'candlestick' (default: 'line')
+     * @param options.period - Data period ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max') (default: '1mo')
+     * @param options.interval - Data interval ('1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo') (default: '1d')
+     * @param options.start - Start date for data in 'YYYY-MM-DD' format (optional)
+     * @param options.end - End date for data in 'YYYY-MM-DD' format (optional)
+     * @param options.ohlc - Whether to use OHLC data (boolean, default: false; forced true for candlestick charts)
+     */
     constructor(containerId, symbol, options = {}) {
         this.containerID = containerId;
         this.container = document.getElementById(containerId);
@@ -25,34 +37,58 @@ class StockChart {
      * Change the container element for rendering the chart
      * @param containerId
      */
-    changeContainer(containerId) {
+    setContainer(containerId) {
         this.containerID = containerId;
         this.container = document.getElementById(containerId);
+    }
+
+    /**
+     * Get the current container element
+     * @returns {HTMLElement}
+     */
+    getContainer() {
+        return this.container;
     }
 
     /**
      * Change the stock symbol for the chart & re-render chart
      * @param symbol
      */
-    changeSymbol(symbol) {
+    setSymbol(symbol) {
         this.symbol = symbol;
         this.render();
+    }
+
+    /**
+     * Get the current stock symbol
+     * @returns {*}
+     */
+    getSymbol() {
+        return this.symbol;
     }
 
     /**
      * Change the chart type ('line', 'line-filled', 'candlestick') & re-render chart
      * @param chartType
      */
-    changeChartType(chartType) {
+    setChartType(chartType) {
         this.chartType = chartType;
         this.render();
+    }
+
+    /**
+     * Get the current chart type
+     * @returns {*|string}
+     */
+    getChartType() {
+        return this.chartType;
     }
 
     /**
      * Change chart options (period, interval, start, end, ohlc) & re-render chart
      * @param newOptions
      */
-    changeOptions(newOptions = {}) {
+    setOptions(newOptions = {}) {
         this.options = { ...this.options, ...newOptions };
         if (newOptions.ohlc !== undefined) this.options.ohlc = newOptions.ohlc;
         if (newOptions.chartType === 'candlestick') this.options.ohlc = true; // Ensure OHLC for candlestick
@@ -63,7 +99,7 @@ class StockChart {
      * Get current chart options
      * @returns {*|{period: (*|string), start: null, end: (*|null), interval: (*|string), dataOnly: boolean}}
      */
-    getCurrentOptions() {
+    getOptions() {
         return this.options;
     }
 
