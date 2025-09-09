@@ -42,6 +42,7 @@ class ChartPage {
     init() {
         this.initializeElements();
         this.setupEventListeners();
+        this.loadFromURLParams();
         this.loadInitialWatchlistData();
     }
 
@@ -160,6 +161,63 @@ class ChartPage {
     }
 
     /**
+     * Load chart state from URL parameters
+     */
+    loadFromURLParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        const symbol = urlParams.get('symbol');
+        const chartType = urlParams.get('chartType');
+        const period = urlParams.get('period');
+        const interval = urlParams.get('interval');
+        const start = urlParams.get('start');
+        const end = urlParams.get('end');
+
+        // Set form values from URL params
+        if (chartType) this.chartTypeSelect.value = chartType;
+        if (period) this.periodSelect.value = period;
+        if (interval) this.intervalSelect.value = interval;
+        if (start) this.startDate.value = start;
+        if (end) this.endDate.value = end;
+
+        // Show custom date range if start/end are provided
+        if (start && end) {
+            this.periodSelect.value = 'custom';
+            this.customDateRange.style.display = 'flex';
+        }
+
+        // Load symbol if provided
+        if (symbol) this.selectStock(symbol).then(() => this.loadChart());
+    }
+
+    /**
+     * Update URL parameters with current chart state
+     */
+    updateURLParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Update parameters
+        if (this.currentSymbol) urlParams.set('symbol', this.currentSymbol);
+        else urlParams.delete('symbol');
+
+        if (this.chartTypeSelect.value) urlParams.set('chartType', this.chartTypeSelect.value);
+        if (this.periodSelect.value) urlParams.set('period', this.periodSelect.value);
+        if (this.intervalSelect.value) urlParams.set('interval', this.intervalSelect.value);
+
+        if (this.startDate.value && this.endDate.value) {
+            urlParams.set('start', this.startDate.value);
+            urlParams.set('end', this.endDate.value);
+        } else {
+            urlParams.delete('start');
+            urlParams.delete('end');
+        }
+
+        // Update URL without chart reload
+        const newURL = `${window.location.pathname}?${urlParams.toString()}`;
+        window.history.replaceState({}, '', newURL);
+    }
+
+    /**
      * Load initial watchlist data and update the watchlist option in the stock source select
      */
     loadInitialWatchlistData() {
@@ -259,6 +317,9 @@ class ChartPage {
             this.updateCurrentStockInfo(stockData);
             this.currentSymbol = symbol;
             this.loadChartBtn.disabled = false;
+
+            // Update URL parameters
+            this.updateURLParams();
         } catch (error) {
             console.error('Error selecting stock:', error);
             showNotification(`Failed to load data for ${symbol}`, 'danger');
@@ -289,11 +350,17 @@ class ChartPage {
         this.currentSymbol = null;
         this.currentStockInfo.style.display = 'none';
         this.chartTitle.textContent = 'Stock Chart';
+        this.chartTitle.parentElement.onclick = null;
+        this.chartTitle.parentElement.style.cursor = 'default';
+        this.chartTitle.parentElement.title = '';
         this.chartControls.style.display = 'none';
         this.loadChartBtn.disabled = true;
 
         this.fullscreenChartBtn.style.display = 'none';
         this.exportChartBtn.style.display = 'none';
+
+        // Update URL parameters to clear symbol
+        this.updateURLParams();
 
         // Clear chart
         if (this.chart) {
@@ -319,6 +386,9 @@ class ChartPage {
 
         // Update chart title and show controls
         this.chartTitle.textContent = `${symbol} Chart`;
+        this.chartTitle.parentElement.onclick = () => window.location.href = `/stock/${symbol}`;
+        this.chartTitle.parentElement.style.cursor = 'pointer';
+        this.chartTitle.parentElement.title = 'Go to stock page';
         this.chartControls.style.display = 'flex';
 
         // Show action buttons
@@ -354,5 +424,8 @@ class ChartPage {
 
         if ('chartType' in options) this.chart.setChartType(options.chartType);
         if (['period', 'interval', 'start', 'end'].some(key => key in options)) this.chart.setOptions(options);
+
+        // Update url parameters
+        this.updateURLParams();
     }
 }
