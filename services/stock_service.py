@@ -78,6 +78,7 @@ class StockService:
                 'eps': round(float(info.get('trailingEps', 0)), 2) if info.get('trailingEps') else 'N/A',
                 'dividendYield': round(float(info.get('dividendYield', 0) * 100), 2) if info.get('dividendYield') else 'N/A',
                 'beta': round(float(info.get('beta', 0)), 2) if info.get('beta') else 'N/A',
+                'exchange': exchange,
                 'sector': info.get('sector', 'N/A'),
                 'industry': info.get('industry', 'N/A'),
                 'website': info.get('website', ''),

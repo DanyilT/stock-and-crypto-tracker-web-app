@@ -26,18 +26,14 @@ const API_ENDPOINTS = {
     stockInfo: {
         method: 'GET',
         url: '/api/stock/{symbol}',
-        pathParams: ['symbol']
+        pathParams: ['symbol'],
+        params: ['full-data']
     },
     stockHistory: {
         method: 'GET',
         url: '/api/stock/{symbol}/history',
         pathParams: ['symbol'],
         params: ['period', 'start', 'end', 'interval', 'ohlc', 'data-only']
-    },
-    stockDetails: {
-        method: 'GET',
-        url: '/api/stock/{symbol}/details',
-        pathParams: ['symbol'],
     },
     stockQuote: {
         method: 'GET',
@@ -133,7 +129,8 @@ async function apiRequest(endpointKey, options = {}) {
             endpoint.params.forEach(param => {
                 const value = queryParams[param];
                 if (value !== undefined && value !== null) {
-                    if (param === 'symbols-only' && value) params.append('symbols-only', '');
+                    if (param === 'full-data' && value) params.append('full-data', '');
+                    else if (param === 'symbols-only' && value) params.append('symbols-only', '');
                     else if (param === 'data-only' && value) params.append('data-only', '');
                     else if (param === 'ohlc' && value) params.append('ohlc', '');
                     else if (param === 'quarterly' && value) params.append('quarterly', '');
@@ -220,9 +217,10 @@ async function getPopularStocksList(top = 10, symbolsOnly = false) {
  * @param {string} symbol - Stock symbol
  * @returns {Promise<Object>} Stock data
  */
-async function getStock(symbol) {
+async function getStock(symbol, fullData = false) {
     return apiRequest('stockInfo', {
-        pathParams: { symbol }
+        pathParams: { symbol },
+        queryParams: fullData ? { 'full-data': true } : {}
     });
 }
 
@@ -244,18 +242,6 @@ async function getStockHistory(symbol, options = {}) {
     return apiRequest('stockHistory', {
         pathParams: { symbol },
         queryParams
-    });
-}
-
-/**
- * Get comprehensive stock details
- * @param {string} symbol - Stock symbol
- * @param {string} options - Options for historical data (period, interval, ohlc)
- * @returns {Promise<Object>} Detailed stock data
- */
-async function getStockDetails(symbol, options = {}) {
-    return apiRequest('stockDetails', {
-        pathParams: {symbol}
     });
 }
 
@@ -391,7 +377,6 @@ window.StockAPI = {
     // Individual stock data
     getStock,
     getStockHistory,
-    getStockDetails,
     getQuote,
 
     // Stock financial data

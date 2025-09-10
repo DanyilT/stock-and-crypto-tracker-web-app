@@ -85,7 +85,8 @@ def register_stock_routes(app):
     def get_stock_info(symbol):
         """Get individual stock data"""
         try:
-            data = stock_service.get_stock_data(symbol.upper())
+            full_data = request.args.get('full-data') is not None
+            data = stock_service.get_stock_data(symbol.upper(), full_data=full_data)
             if data:
                 return jsonify(data)
             return jsonify({'error': f'Stock {symbol.upper()} not found or data unavailable'}), 404
@@ -134,17 +135,6 @@ def register_stock_routes(app):
 
         except Exception as e:
             return jsonify({'error': f'Error fetching historical data: {str(e)}'}), 500
-
-    @app.route('/api/stock/<symbol>/details')
-    def get_stock_details(symbol):
-        """Get comprehensive stock details"""
-        try:
-            data = stock_service.get_stock_data(symbol.upper(), full_data=True)
-            if not data:
-                return jsonify(data)
-            return jsonify({'error': f'Stock {symbol.upper()} not found or data unavailable'}), 404
-        except Exception as e:
-            return jsonify({'error': f'Error fetching detailed stock data: {str(e)}'}), 500
 
     @app.route('/api/stock/<symbol>/quote')
     def get_stock_quote(symbol):
