@@ -153,6 +153,206 @@ class StockTab {
 
 
 /**
+ * Overview tab implementation
+ */
+class StockOverviewTab extends StockTab {
+    /**
+     * Constructor
+     * @param symbol {string} - Stock symbol
+     */
+    constructor(symbol) {
+        super(symbol);
+        this.title = 'Overview';
+        this.icon = 'fas fa-chart-line';
+        this.id = 'overview-tab';
+
+        this.api = () => StockAPI.getStock(symbol, true);
+    }
+
+    /**
+     * Generate the HTML content for the overview tab
+     */
+    generateContent() {
+        if (!this.data || typeof this.data !== 'object') {
+            this.error('No data available for this stock.');
+            return;
+        }
+
+        this.content = this.generateMainElements();
+    }
+
+    /**
+     * Generate the main HTML elements (overview content)
+     * @returns {string} - HTML string
+     */
+    generateMainElements() {
+        // Helper function to generate header section
+        function generateHeader(data) {
+            // Format change data
+            const formattedChangeData = StockFormatters.formatPriceChange({ absolute: data.change, percentage: data.changePercent }, { currency: data.currency, isDecimal: false });
+
+            return `
+                <div class="row mb-4">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h3 class="mb-1">${StockFormatters.formatCompanyName(data.name)}</h3>
+                            <div class="d-flex gap-3 text-muted align-items-center">
+                                <h3 class="h5 mb-0 me-2" title="Symbol">${StockFormatters.formatSymbol(data.symbol)}</h3>
+                                <span title="Exchange">${data.exchange}</span>
+                                <span title="Currency">${data.currency}</span>
+                                <span class="badge bg-secondary" title="Market">${data.market} Market</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="h4 mb-1">${StockFormatters.formatPrice(data.price, { currency: data.currency })}</div>
+                            <div class="${StockFormatters.getColorClass(formattedChangeData.combined.color)}">${formattedChangeData.combined.value}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Helper function to generate stats cards
+        function generateStats(data) {
+            // Generate individual stat cards
+            function generateStatCard(title, value) {
+                return `
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body text-center">
+                                <div class="text-muted small mb-1">${title}</div>
+                                <div class="h6 mb-0">${value}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="row mb-4">
+                    ${generateStatCard('Previous Close', StockFormatters.formatPrice(data.previousClose, { currency: data.currency }))}
+                    ${generateStatCard('Open', StockFormatters.formatPrice(data.openPrice, { currency: data.currency }))}
+                    ${generateStatCard('Day Range', StockFormatters.formatPrice(data.dayLow, { currency: data.currency }) - StockFormatters.formatPrice(data.dayHigh, { currency: data.currency }))}
+                    ${generateStatCard('52 Week Range', StockFormatters.formatPrice(data.fiftyTwoWeekLow, { currency: data.currency }) - StockFormatters.formatPrice(data.fiftyTwoWeekHigh, { currency: data.currency }))}
+                </div>
+            `;
+        }
+
+        // Helper function to generate market data section
+        function generateMarketData(data) {
+            // Helper function to format market cap size descr (Large Cap, Mid Cap, etc.)
+            function formatMarketCapSize(marketCap) {
+                if (!marketCap || marketCap === 0) return 'N/A';
+                if (marketCap >= 200e9) return 'Large Cap';
+                if (marketCap >= 10e9) return 'Mid Cap';
+                if (marketCap >= 2e9) return 'Small Cap';
+                return 'Micro Cap';
+            }
+
+            return `
+                <div class="col-lg-6 mb-4">
+                    <h5><i class="fas fa-chart-bar me-2"></i>Market Data</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>Market Cap</td>
+                                    <td class="text-end" title="${data.marketCap}">${StockFormatters.formatMarketCap(data.marketCap, { currency: data.currency })}<small class="text-muted ms-2">(${formatMarketCapSize(data.marketCap)})</small></td>
+                                </tr>
+                                <tr>
+                                    <td>Volume</td>
+                                    <td class="text-end" title="${data.volume}">${StockFormatters.formatVolume(data.volume)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Average Volume</td>
+                                    <td class="text-end" title="${data.avgVolume}">${StockFormatters.formatVolume(data.avgVolume)}</td>
+                                </tr>
+                                <tr>
+                                    <td title="Price to Earnings Ratio">P/E Ratio</td>
+                                    <td class="text-end">${data.peRatio}</td>
+                                </tr>
+                                <tr>
+                                    <td title="Earnings Per Share">EPS</td>
+                                    <td class="text-end">${StockFormatters.formatCurrency(data.eps, { currency: data.currency })}</td>
+                                </tr>
+                                <tr>
+                                    <td title="Dividend Yield">Dividend Yield</td>
+                                    <td class="text-end">${data.dividendYield !== 'N/A' ? data.dividendYield + '%' : 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td title="Stock beta measures a stock's volatility or risk relative to the overall market, with a beta of 1 indicating the stock moves in line with the market, a beta above 1 suggesting higher volatility and risk, and a beta below 1 indicating lower volatility and risk">Beta</td>
+                                    <td class="text-end">${data.beta}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Helper function to generate company info section
+        function generateCompanyInfo(data) {
+            return `
+                <div class="col-lg-6 mb-4">
+                    <h5><i class="fas fa-building me-2"></i>Company Info</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>Sector</td>
+                                    <td class="text-end">${data.sector || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>Industry</td>
+                                    <td class="text-end">${data.industry || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>Exchange</td>
+                                    <td class="text-end">${data.exchange || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>Currency</td>
+                                    <td class="text-end">${data.currency || 'idk, probably USD'}</td>
+                                </tr>
+                                ${data.website ? `<tr><td>Website</td><td class="text-end"><a href="${data.website}" target="_blank" rel="noopener noreferrer" class="text-decoration-none"><i class="fas fa-external-link-alt me-1"></i>Visit</a></td></tr>` : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Helper function to generate company summary section
+        function generateCompanySummary(summary) {
+            return summary ? `
+            <div class="row">
+                <div class="col-12">
+                    <h5><i class="fas fa-info-circle me-2"></i>Business Summary</h5>
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <p class="mb-0">${summary}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : '';
+        }
+
+        return `
+            ${generateHeader(this.data)}
+            ${generateStats(this.data)}
+
+            <div class="row mb-4">
+                ${generateMarketData(this.data)}
+                ${generateCompanyInfo(this.data)}
+            </div>
+
+            ${generateCompanySummary(this.data.businessSummary)}
+        `;
+    }
+}
+
+/**
  * Dividends tab implementation
  */
 class StockDividendsTab extends StockTab {
