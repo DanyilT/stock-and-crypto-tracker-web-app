@@ -38,7 +38,6 @@ const API_ENDPOINTS = {
         method: 'GET',
         url: '/api/stock/{symbol}/details',
         pathParams: ['symbol'],
-        params: ['period', 'interval', 'ohlc']
     },
     stockQuote: {
         method: 'GET',
@@ -74,7 +73,8 @@ const API_ENDPOINTS = {
     stockOptions: {
         method: 'GET',
         url: '/api/stock/{symbol}/options',
-        pathParams: ['symbol']
+        pathParams: ['symbol'],
+        params: ['expiration']
     },
     stockNews: {
         method: 'GET',
@@ -255,8 +255,7 @@ async function getStockHistory(symbol, options = {}) {
  */
 async function getStockDetails(symbol, options = {}) {
     return apiRequest('stockDetails', {
-        pathParams: { symbol },
-        queryParams: { ...options }
+        pathParams: {symbol}
     });
 }
 
@@ -305,7 +304,7 @@ async function getStockDividends(symbol, period = '5y') {
 async function getStockFinancials(symbol, type = 'income', quarterly = false) {
     return apiRequest('stockFinancials', {
         pathParams: { symbol },
-        queryParams: { type, quarterly }
+        queryParams: quarterly ? { type, quarterly: true } : { type }
     });
 }
 
@@ -323,11 +322,13 @@ async function getStockHolders(symbol) {
 /**
  * Get stock options data
  * @param {string} symbol - Stock symbol
+ * @param {string|null} expiration - Expiration date (YYYY-MM-DD) or null for nearest
  * @returns {Promise<Object>} Options data
  */
-async function getStockOptions(symbol) {
+async function getStockOptions(symbol, expiration = null) {
     return apiRequest('stockOptions', {
-        pathParams: { symbol }
+        pathParams: { symbol },
+        queryParams: { expiration }
     });
 }
 

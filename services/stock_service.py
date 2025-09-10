@@ -246,6 +246,266 @@ class StockService:
             print(f"Error fetching stock splits for {symbol}: {e}")
             return []
 
+    def get_dividend_history(self, symbol, period='5y'):
+        """
+        Get dividend payment history
+
+        Args:
+            symbol: Stock symbol
+            period: Time period for dividend history
+
+        Returns:
+            List of dividend payments with dates and amounts
+        """
+        try:
+            ticker = yf.Ticker(symbol.upper())
+            dividends = ticker.dividends
+
+            if dividends.empty:
+                return []
+
+            # Filter by period if specified
+            if period != 'max':
+                end_date = pd.Timestamp.now(tz='UTC')
+                if period == '1y':
+                    start_date = end_date - pd.DateOffset(years=1)
+                elif period == '3y':
+                    start_date = end_date - pd.DateOffset(years=3)
+                elif period == '5y':
+                    start_date = end_date - pd.DateOffset(years=5)
+                else:
+                    start_date = end_date - pd.DateOffset(years=1)
+
+                # Convert dividend index to UTC for comparison
+                dividend_index = dividends.index.tz_convert('UTC') if dividends.index.tz else dividends.index.tz_localize('UTC')
+                dividends = dividends[dividend_index >= start_date]
+
+            dividend_history = []
+            for date, amount in dividends.items():
+                # Handle timezone-aware dates
+                if hasattr(date, 'tz_localize'):
+                    date_str = date.strftime('%Y-%m-%d')
+                else:
+                    date_str = date.isoformat()
+
+                dividend_history.append({
+                    'date': date_str,
+                    'amount': round(float(amount), 4),
+                    'year': date.year,
+                    'quarter': f"Q{(date.month-1)//3 + 1}"
+                })
+
+            return {
+                'dividends': sorted(dividend_history, key=lambda x: x['date'], reverse=True),
+                'metadata': {
+                    'currency': ticker.info.get('currency', 'USD'),
+                    'symbol': symbol.upper()
+                }
+            }
+
+        except Exception as e:
+            print(f"Error fetching dividend history for {symbol}: {e}")
+            return []
+
+    def get_financial_statements(self, symbol, statement_type='income', quarterly=False):
+        """
+        Get financial statements (income, balance sheet, cash flow)
+
+        Args:
+            symbol: Stock symbol
+            statement_type: 'income', 'balance', or 'cashflow'
+            quarterly: If True, get quarterly data; if False, get annual data
+
+        Returns:
+            Financial statement data as dictionary
+        """
+        try:
+            ticker = yf.Ticker(symbol.upper())
+
+            if statement_type == 'income':
+                df = ticker.quarterly_income_stmt if quarterly else ticker.income_stmt
+            elif statement_type == 'balance':
+                df = ticker.quarterly_balance_sheet if quarterly else ticker.balance_sheet
+            elif statement_type == 'cashflow':
+                df = ticker.quarterly_cash_flow if quarterly else ticker.cash_flow
+            else:
+                return {}
+
+            if df.empty:
+                return {}
+
+            # Convert to dictionary format
+            result = {
+                'symbol': symbol.upper(),
+                'type': statement_type,
+                'quarterly': quarterly,
+                'periods': [],
+                'data': {}
+            }
+
+            # Get period headers (dates)
+            periods = [col.strftime('%Y-%m-%d') for col in df.columns]
+            result['periods'] = periods
+
+            # Convert financial data
+            for index, row in df.iterrows():
+                key = str(index).replace(' ', '_').lower()
+                values = []
+                for period in df.columns:
+                    value = row[period]
+                    if pd.isna(value):
+                        values.append(None)
+                    else:
+                        values.append(int(value) if isinstance(value, (int, float)) else str(value))
+                result['data'][key] = values
+
+            return result
+
+        except Exception as e:
+            print(f"Error fetching {statement_type} statement for {symbol}: {e}")
+            return {}
+
+    def get_institutional_holders(self, symbol):
+        """
+        Get institutional ownership information
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            Dictionary with institutional holders and major holders breakdown
+        """
+        try:
+            ticker = yf.Ticker(symbol.upper())
+            institutional = ticker.institutional_holders
+            major = ticker.major_holders
+
+            result = {
+                'institutional': [],
+                'major': {}
+            }
+
+            # Format institutional holders
+            if institutional is not None and not institutional.empty:
+                for index, row in institutional.iterrows():
+                    result['institutional'].append({
+                        'holder': row.get('Holder', 'Unknown'),
+                        'shares': int(row.get('Shares', 0)),
+                        'dateReportedTimestamp': int(pd.to_datetime(row.get('Date Reported')).timestamp()) if pd.notna(row.get('Date Reported')) else 0,
+                        'percentOut': round(float(row.get('% Out', 0)), 2) if row.get('% Out') else 'N/A',
+                        'value': int(row.get('Value', 0))
+                    })
+
+            # Format major holders summary
+            if major is not None and not major.empty and major.shape[1] >= 2:
+                for index, row in major.iterrows():
+                    key = str(row.iloc[1]).lower().replace(' ', '_').replace('%', 'percent')
+                    result['major'][key] = row.iloc[0]
+
+            return result
+
+        except Exception as e:
+            print(f"Error fetching institutional holders for {symbol}: {e}")
+            return {}
+
+    def get_options_data(self, symbol, expiration=None):
+        """
+        Get options data for a stock symbol
+
+        Args:
+            symbol: Stock symbol
+            expiration: Specific expiration date in YYYY-MM-DD format (optional)
+
+        Returns:
+            dict: Options data including calls, puts, available expirations, and metadata
+        """
+        try:
+            ticker = yf.Ticker(symbol.upper())
+
+            # Get available expiration dates
+            exp_dates = ticker.options
+            if not exp_dates:
+                return {}
+
+            # Determine which expiration to use
+            if expiration:
+                # Validate that the requested expiration is available
+                if expiration not in exp_dates:
+                    # Find the closest available expiration
+                    from datetime import datetime
+                    try:
+                        target_date = datetime.strptime(expiration, '%Y-%m-%d')
+                        available_dates = [datetime.strptime(date, '%Y-%m-%d') for date in exp_dates]
+                        closest_date = min(available_dates, key=lambda x: abs((x - target_date).days))
+                        selected_expiration = closest_date.strftime('%Y-%m-%d')
+                    except (ValueError, TypeError):
+                        selected_expiration = exp_dates[0]
+                else:
+                    selected_expiration = expiration
+            else:
+                # Default to the first (nearest) expiration
+                selected_expiration = exp_dates[0]
+
+            # Get options chain for the selected expiration
+            options_chain = ticker.option_chain(selected_expiration)
+
+            # Format calls data
+            calls = []
+            if not options_chain.calls.empty:
+                for _, call in options_chain.calls.iterrows():
+                    strike = float(call['strike'])
+                    last_price = float(call['lastPrice']) if pd.notna(call['lastPrice']) else 0
+
+                    calls.append({
+                        'contractName': f"{symbol.upper()}{selected_expiration.replace('-', '')}{str(int(strike)).zfill(8)}C",
+                        'lastTradeDateTimestamp': int(call['lastTradeDate'].timestamp()),
+                        'strike': strike,
+                        'lastPrice': round(last_price, 2),
+                        'bid': round(float(call['bid']), 2) if pd.notna(call['bid']) else 0,
+                        'ask': round(float(call['ask']), 2) if pd.notna(call['ask']) else 0,
+                        'change': round(float(call['change']), 2),
+                        'changePercent': round((float(call['change']) / (last_price - float(call['change']))) * 100, 2) if (last_price - float(call['change'])) != 0 else 0,
+                        'volume': int(call['volume']) if pd.notna(call['volume']) else 0,
+                        'openInterest': int(call['openInterest']) if pd.notna(call['openInterest']) else 0,
+                        'impliedVolatility': round(float(call['impliedVolatility']) * 100, 2) if pd.notna(call['impliedVolatility']) else 0
+                    })
+
+            # Format puts data
+            puts = []
+            if not options_chain.puts.empty:
+                for _, put in options_chain.puts.iterrows():
+                    strike = float(put['strike'])
+                    last_price = float(put['lastPrice']) if pd.notna(put['lastPrice']) else 0
+
+                    puts.append({
+                        'contractName': f"{symbol.upper()}{selected_expiration.replace('-', '')}{str(int(strike)).zfill(8)}P",
+                        'lastTradeDateTimestamp': int(put['lastTradeDate'].timestamp()),
+                        'strike': strike,
+                        'lastPrice': round(last_price, 2),
+                        'bid': round(float(put['bid']), 2) if pd.notna(put['bid']) else 0,
+                        'ask': round(float(put['ask']), 2) if pd.notna(put['ask']) else 0,
+                        'change': round(float(put['change']), 2),
+                        'changePercent': round((float(put['change']) / (last_price - float(put['change']))) * 100, 2) if (last_price - float(put['change'])) != 0 else 0,
+                        'volume': int(put['volume']) if pd.notna(put['volume']) else 0,
+                        'openInterest': int(put['openInterest']) if pd.notna(put['openInterest']) else 0,
+                        'impliedVolatility': round(float(put['impliedVolatility']) * 100, 2) if pd.notna(put['impliedVolatility']) else 0
+                    })
+
+            return {
+                'availableExpirations': list(exp_dates),
+                'calls': calls,
+                'puts': puts,
+                'metadata': {
+                    'expiration': selected_expiration,
+                    'symbol': symbol.upper(),
+                    'currency': ticker.info.get('currency', 'USD') # Get currency from stock info
+                }
+            }
+
+        except Exception as e:
+            print(f"Error fetching options data for {symbol}: {e}")
+            return {}
+
     def get_stock_news(self, symbol, limit=10):
         """
         Get recent news for a stock
@@ -315,6 +575,88 @@ class StockService:
         except Exception as e:
             print(f"Error fetching news for {symbol}: {e}")
             return []
+
+    def get_market_indices(self):
+        """
+        Get major market indices data
+
+        Returns:
+            Dictionary with major market indices information
+        """
+        try:
+            # Major indices symbols
+            indices = {
+                'sp500': '^GSPC',      # S&P 500
+                'dow': '^DJI',         # Dow Jones Industrial Average
+                'nasdaq': '^IXIC',     # NASDAQ Composite
+                'russell2000': '^RUT', # Russell 2000
+                'vix': '^VIX',         # Volatility Index
+                'ftse': '^FTSE',       # FTSE 100 (UK)
+                'dax': '^GDAXI',       # DAX (Germany)
+                'nikkei': '^N225',     # Nikkei 225 (Japan)
+                'shanghai': '000001.SS', # Shanghai Composite (China)
+                'cac40': '^FCHI',      # CAC 40 (France)
+            }
+
+            indices_data = {}
+
+            for name, symbol in indices.items():
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+
+                    current_price = info.get('regularMarketPrice') or info.get('currentPrice')
+                    if not current_price:
+                        continue
+
+                    previous_close = info.get('previousClose', current_price)
+                    change = current_price - previous_close
+                    change_percent = (change / previous_close * 100) if previous_close else 0
+
+                    indices_data[name] = {
+                        'symbol': symbol,
+                        'name': info.get('longName') or name.upper(),
+                        'price': round(float(current_price), 2),
+                        'change': round(float(change), 2),
+                        'changePercent': round(float(change_percent), 2),
+                        'dayHigh': round(float(info.get('dayHigh', 0)), 2),
+                        'dayLow': round(float(info.get('dayLow', 0)), 2),
+                        'volume': info.get('volume', 0),
+                        'currency': info.get('currency', 'USD'),
+                        'exchange': info.get('exchange', 'N/A'),
+                        'marketState': info.get('marketState', 'UNKNOWN')
+                    }
+
+                except Exception as e:
+                    print(f"Error fetching {name} index data: {e}")
+                    continue
+
+            return {
+                'indices': indices_data,
+                'lastUpdated': datetime.now().isoformat(),
+                'marketSummary': self._get_market_summary(indices_data)
+            }
+
+        except Exception as e:
+            print(f"Error fetching market indices: {e}")
+            return {}
+
+    def _get_market_summary(self, indices_data):
+        """Generate market summary from indices data"""
+        if not indices_data:
+            return {}
+
+        up_count = sum(1 for data in indices_data.values() if data.get('change', 0) > 0)
+        down_count = sum(1 for data in indices_data.values() if data.get('change', 0) < 0)
+        unchanged_count = len(indices_data) - up_count - down_count
+
+        return {
+            'totalIndices': len(indices_data),
+            'marketsUp': up_count,
+            'marketsDown': down_count,
+            'marketsUnchanged': unchanged_count,
+            'marketSentiment': 'bullish' if up_count > down_count else 'bearish' if down_count > up_count else 'neutral'
+        }
 
     def get_market_news(self, limit=20, category='general'):
         """
@@ -407,303 +749,3 @@ class StockService:
         except Exception as e:
             print(f"Error fetching market news: {e}")
             return []
-
-    def get_dividend_history(self, symbol, period='5y'):
-        """
-        Get dividend payment history
-
-        Args:
-            symbol: Stock symbol
-            period: Time period for dividend history
-
-        Returns:
-            List of dividend payments with dates and amounts
-        """
-        try:
-            ticker = yf.Ticker(symbol.upper())
-            dividends = ticker.dividends
-
-            if dividends.empty:
-                return []
-
-            # Filter by period if specified
-            if period != 'max':
-                end_date = pd.Timestamp.now(tz='UTC')
-                if period == '1y':
-                    start_date = end_date - pd.DateOffset(years=1)
-                elif period == '3y':
-                    start_date = end_date - pd.DateOffset(years=3)
-                elif period == '5y':
-                    start_date = end_date - pd.DateOffset(years=5)
-                else:
-                    start_date = end_date - pd.DateOffset(years=1)
-
-                # Convert dividend index to UTC for comparison
-                dividend_index = dividends.index.tz_convert('UTC') if dividends.index.tz else dividends.index.tz_localize('UTC')
-                dividends = dividends[dividend_index >= start_date]
-
-            dividend_history = []
-            for date, amount in dividends.items():
-                # Handle timezone-aware dates
-                if hasattr(date, 'tz_localize'):
-                    date_str = date.strftime('%Y-%m-%d')
-                else:
-                    date_str = date.isoformat()
-
-                dividend_history.append({
-                    'date': date_str,
-                    'amount': round(float(amount), 4),
-                    'year': date.year,
-                    'quarter': f"Q{(date.month-1)//3 + 1}"
-                })
-
-            return sorted(dividend_history, key=lambda x: x['date'], reverse=True)
-
-        except Exception as e:
-            print(f"Error fetching dividend history for {symbol}: {e}")
-            return []
-
-    def get_institutional_holders(self, symbol):
-        """
-        Get institutional ownership information
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            List of major institutional holders
-        """
-        try:
-            ticker = yf.Ticker(symbol.upper())
-            institutional = ticker.institutional_holders
-            major = ticker.major_holders
-
-            result = {
-                'institutional': [],
-                'major': {}
-            }
-
-            # Format institutional holders
-            if institutional is not None and not institutional.empty:
-                for index, row in institutional.iterrows():
-                    result['institutional'].append({
-                        'holder': row.get('Holder', 'Unknown'),
-                        'shares': int(row.get('Shares', 0)),
-                        'dateReported': row.get('Date Reported', 'N/A'),
-                        'percentOut': round(float(row.get('% Out', 0)), 2) if row.get('% Out') else 'N/A',
-                        'value': int(row.get('Value', 0))
-                    })
-
-            # Format major holders summary
-            if major is not None and not major.empty and major.shape[1] >= 2:
-                for index, row in major.iterrows():
-                    key = str(row.iloc[1]).lower().replace(' ', '_').replace('%', 'percent')
-                    result['major'][key] = row.iloc[0]
-
-            return result
-
-        except Exception as e:
-            print(f"Error fetching institutional holders for {symbol}: {e}")
-            return {}
-
-    def get_financial_statements(self, symbol, statement_type='income', quarterly=False):
-        """
-        Get financial statements (income, balance sheet, cash flow)
-
-        Args:
-            symbol: Stock symbol
-            statement_type: 'income', 'balance', or 'cashflow'
-            quarterly: If True, get quarterly data; if False, get annual data
-
-        Returns:
-            Financial statement data as dictionary
-        """
-        try:
-            ticker = yf.Ticker(symbol.upper())
-
-            if statement_type == 'income':
-                df = ticker.quarterly_income_stmt if quarterly else ticker.income_stmt
-            elif statement_type == 'balance':
-                df = ticker.quarterly_balance_sheet if quarterly else ticker.balance_sheet
-            elif statement_type == 'cashflow':
-                df = ticker.quarterly_cash_flow if quarterly else ticker.cash_flow
-            else:
-                return {}
-
-            if df.empty:
-                return {}
-
-            # Convert to dictionary format
-            result = {
-                'symbol': symbol.upper(),
-                'type': statement_type,
-                'quarterly': quarterly,
-                'periods': [],
-                'data': {}
-            }
-
-            # Get period headers (dates)
-            periods = [col.strftime('%Y-%m-%d') for col in df.columns]
-            result['periods'] = periods
-
-            # Convert financial data
-            for index, row in df.iterrows():
-                key = str(index).replace(' ', '_').lower()
-                values = []
-                for period in df.columns:
-                    value = row[period]
-                    if pd.isna(value):
-                        values.append(None)
-                    else:
-                        values.append(int(value) if isinstance(value, (int, float)) else str(value))
-                result['data'][key] = values
-
-            return result
-
-        except Exception as e:
-            print(f"Error fetching {statement_type} statement for {symbol}: {e}")
-            return {}
-
-    def get_options_data(self, symbol):
-        """
-        Get options chain data
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Options data with calls and puts
-        """
-        try:
-            ticker = yf.Ticker(symbol.upper())
-
-            # Get available expiration dates
-            exp_dates = ticker.options
-            if not exp_dates:
-                return {}
-
-            # Get options for the nearest expiration
-            nearest_exp = exp_dates[0]
-            option_chain = ticker.option_chain(nearest_exp)
-
-            result = {
-                'symbol': symbol.upper(),
-                'expiration': nearest_exp,
-                'availableExpirations': exp_dates,
-                'calls': [],
-                'puts': []
-            }
-
-            # Format calls
-            if hasattr(option_chain, 'calls') and not option_chain.calls.empty:
-                for index, row in option_chain.calls.iterrows():
-                    result['calls'].append({
-                        'strike': float(row['strike']),
-                        'lastPrice': float(row['lastPrice']),
-                        'bid': float(row['bid']),
-                        'ask': float(row['ask']),
-                        'volume': int(row['volume']) if not pd.isna(row['volume']) else 0,
-                        'openInterest': int(row['openInterest']) if not pd.isna(row['openInterest']) else 0,
-                        'impliedVolatility': float(row['impliedVolatility'])
-                    })
-
-            # Format puts
-            if hasattr(option_chain, 'puts') and not option_chain.puts.empty:
-                for index, row in option_chain.puts.iterrows():
-                    result['puts'].append({
-                        'strike': float(row['strike']),
-                        'lastPrice': float(row['lastPrice']),
-                        'bid': float(row['bid']),
-                        'ask': float(row['ask']),
-                        'volume': int(row['volume']) if not pd.isna(row['volume']) else 0,
-                        'openInterest': int(row['openInterest']) if not pd.isna(row['openInterest']) else 0,
-                        'impliedVolatility': float(row['impliedVolatility'])
-                    })
-
-            return result
-
-        except Exception as e:
-            print(f"Error fetching options data for {symbol}: {e}")
-            return {}
-
-    def get_market_indices(self):
-        """
-        Get major market indices data
-
-        Returns:
-            Dictionary with major market indices information
-        """
-        try:
-            # Major indices symbols
-            indices = {
-                'sp500': '^GSPC',      # S&P 500
-                'dow': '^DJI',         # Dow Jones Industrial Average
-                'nasdaq': '^IXIC',     # NASDAQ Composite
-                'russell2000': '^RUT', # Russell 2000
-                'vix': '^VIX',         # Volatility Index
-                'ftse': '^FTSE',       # FTSE 100 (UK)
-                'dax': '^GDAXI',       # DAX (Germany)
-                'nikkei': '^N225',     # Nikkei 225 (Japan)
-                'shanghai': '000001.SS', # Shanghai Composite (China)
-                'cac40': '^FCHI',      # CAC 40 (France)
-            }
-
-            indices_data = {}
-
-            for name, symbol in indices.items():
-                try:
-                    ticker = yf.Ticker(symbol)
-                    info = ticker.info
-
-                    current_price = info.get('regularMarketPrice') or info.get('currentPrice')
-                    if not current_price:
-                        continue
-
-                    previous_close = info.get('previousClose', current_price)
-                    change = current_price - previous_close
-                    change_percent = (change / previous_close * 100) if previous_close else 0
-
-                    indices_data[name] = {
-                        'symbol': symbol,
-                        'name': info.get('longName') or name.upper(),
-                        'price': round(float(current_price), 2),
-                        'change': round(float(change), 2),
-                        'changePercent': round(float(change_percent), 2),
-                        'dayHigh': round(float(info.get('dayHigh', 0)), 2),
-                        'dayLow': round(float(info.get('dayLow', 0)), 2),
-                        'volume': info.get('volume', 0),
-                        'currency': info.get('currency', 'USD'),
-                        'exchange': info.get('exchange', 'N/A'),
-                        'marketState': info.get('marketState', 'UNKNOWN')
-                    }
-
-                except Exception as e:
-                    print(f"Error fetching {name} index data: {e}")
-                    continue
-
-            return {
-                'indices': indices_data,
-                'lastUpdated': datetime.now().isoformat(),
-                'marketSummary': self._get_market_summary(indices_data)
-            }
-
-        except Exception as e:
-            print(f"Error fetching market indices: {e}")
-            return {}
-
-    def _get_market_summary(self, indices_data):
-        """Generate market summary from indices data"""
-        if not indices_data:
-            return {}
-
-        up_count = sum(1 for data in indices_data.values() if data.get('change', 0) > 0)
-        down_count = sum(1 for data in indices_data.values() if data.get('change', 0) < 0)
-        unchanged_count = len(indices_data) - up_count - down_count
-
-        return {
-            'totalIndices': len(indices_data),
-            'marketsUp': up_count,
-            'marketsDown': down_count,
-            'marketsUnchanged': unchanged_count,
-            'marketSentiment': 'bullish' if up_count > down_count else 'bearish' if down_count > up_count else 'neutral'
-        }

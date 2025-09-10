@@ -141,30 +141,13 @@ def register_stock_routes(app):
         try:
             data = stock_service.get_stock_data(symbol.upper(), full_data=True)
             if not data:
-                return jsonify({'error': f'No data available for {symbol.upper()}'}), 404
-
-            # Add historical data for mini chart
-            period = request.args.get('period', '1mo')
-            is_valid, _ = validate_period(period)
-            if not is_valid: period = '1mo'  # fallback to default
-
-            interval = request.args.get('interval', '1d')
-            is_valid, _ = validate_interval(interval)
-            if not is_valid: interval = '1d'  # fallback to default
-
-            historical_data = stock_service.get_historical_data(symbol, period=period, interval=interval, ohlc=request.args.get('ohlc') is not None)
-            if historical_data is not None:
-                data['historicalData'] = historical_data
-            else:
-                data['historicalData'] = []
-
-            return jsonify(data)
-
+                return jsonify(data)
+            return jsonify({'error': f'Stock {symbol.upper()} not found or data unavailable'}), 404
         except Exception as e:
             return jsonify({'error': f'Error fetching detailed stock data: {str(e)}'}), 500
 
     @app.route('/api/stock/<symbol>/quote')
-    def get_stock_quote_route(symbol):
+    def get_stock_quote(symbol):
         """Get real-time stock quote with essential trading information"""
         try:
             quote = stock_service.get_stock_quote(symbol.upper())
@@ -240,7 +223,8 @@ def register_stock_routes(app):
     def get_options_data(symbol):
         """Get options chain data"""
         try:
-            options = stock_service.get_options_data(symbol.upper())
+            expiration = request.args.get('expiration', None)
+            options = stock_service.get_options_data(symbol.upper(), expiration=expiration)
             if not options:
                 return jsonify({'error': f'No options data available for {symbol.upper()}'}), 404
 
@@ -253,7 +237,7 @@ def register_stock_routes(app):
     def get_stock_news(symbol):
         """Get recent news for a stock"""
         try:
-            limit = request.args.get('limit', default=10, type=int)
+            limit = request.args.get('limit', default=10, type=int) # Default 10 (max 10)
             limit = min(max(limit, 1), 50)  # Between 1 and 50
 
             news = stock_service.get_stock_news(symbol.upper(), limit=limit)

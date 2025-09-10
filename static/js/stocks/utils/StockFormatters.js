@@ -59,6 +59,7 @@ function formatPrice(price, options = {}) {
     if (price < 1) decimals = 4;
     else if (price < 10) decimals = 3;
 
+    if (options.currency === null) return new Intl.NumberFormat(options.locale || 'en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(price);
     return formatCurrency(price, { minimumFractionDigits: decimals, maximumFractionDigits: decimals, ...options });
 }
 
