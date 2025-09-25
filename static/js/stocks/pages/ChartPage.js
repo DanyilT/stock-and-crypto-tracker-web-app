@@ -284,7 +284,7 @@ class ChartPage {
         this.currentStockExchange.textContent = stockData.exchange || 'N/A';
         this.currentStockPrice.textContent = StockFormatters.formatPrice(stockData.price, { currency: stockData.currency });
 
-        const priceChange = StockFormatters.formatPriceChange({ absolute: stockData.change, percentage: stockData.changePercent }, { isDecimal: false });
+        const priceChange = StockFormatters.formatPriceChange({ absolute: stockData.change, percentage: stockData.changePercent }, { isDecimal: false }); // TODO: FIX: same issue as above.. with currency
         this.currentStockChange.className = `small ${StockFormatters.getColorClass(priceChange.combined.color)}`;
         this.currentStockChange.textContent = priceChange.combined.value;
 
