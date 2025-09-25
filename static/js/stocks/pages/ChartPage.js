@@ -16,23 +16,18 @@ class ChartPage {
             currentStockPriceId: 'current-stock-price',
             currentStockChangeId: 'current-stock-change',
 
-            chartContainerId: 'chart-container',
-            chartTitleId: 'chart-title',
-            chartControlsId: 'chart-controls',
-            chartTypeSelectId: 'chart-type-select',
-            periodSelectId: 'period-select',
-            intervalSelectId: 'interval-select',
-            customDateRangeId: 'custom-date-range',
-            startDateId: 'start-date',
-            endDateId: 'end-date',
-
             fullscreenChartBtnId: 'fullscreen-chart-btn',
             exportChartBtnId: 'export-chart-btn'
         };
 
         this.currentSymbol = null;
         this.stockSearch = null;
-        this.chart = null;
+        this.assetChart = new AssetChart('chart-container', {
+            onSymbolClick: (symbol) => window.location.href = `/stock/${symbol}`,
+            onStateChange: (state) => this.onChartStateChange(state),
+            onChartLoaded: (symbol) => this.onChartLoaded(symbol),
+            onChartCleared: () => this.onChartCleared()
+        });
         this.watchlistManager = new StocksWatchlistManager();
 
         this.init();
@@ -68,17 +63,6 @@ class ChartPage {
         this.currentStockPrice = document.getElementById(this.elements.currentStockPriceId);
         this.currentStockChange = document.getElementById(this.elements.currentStockChangeId);
 
-        // Chart elements
-        this.chartContainer = document.getElementById(this.elements.chartContainerId);
-        this.chartTitle = document.getElementById(this.elements.chartTitleId);
-        this.chartControls = document.getElementById(this.elements.chartControlsId);
-        this.chartTypeSelect = document.getElementById(this.elements.chartTypeSelectId);
-        this.periodSelect = document.getElementById(this.elements.periodSelectId);
-        this.intervalSelect = document.getElementById(this.elements.intervalSelectId);
-        this.customDateRange = document.getElementById(this.elements.customDateRangeId);
-        this.startDate = document.getElementById(this.elements.startDateId);
-        this.endDate = document.getElementById(this.elements.endDateId);
-
         // Chart action buttons
         this.fullscreenChartBtn = document.getElementById(this.elements.fullscreenChartBtnId);
         this.exportChartBtn = document.getElementById(this.elements.exportChartBtnId);
@@ -92,9 +76,10 @@ class ChartPage {
                 // Enter on input - select first result if available
                 const firstResult = this.searchResultsContainer.querySelector('.search-result-item[data-symbol]');
                 if (firstResult && firstResult.dataset.symbol) {
-                    this.selectStock(firstResult.dataset.symbol);
-                    this.stockSearch.hideOutputContainer();
-                    this.searchInput.value = '';
+                    this.selectStock(firstResult.dataset.symbol).then(() => {
+                        this.stockSearch.hideOutputContainer();
+                        this.searchInput.value = '';
+                    });
                 }
             }
         });
@@ -103,9 +88,10 @@ class ChartPage {
         this.searchResultsContainer.addEventListener('click', (e) => {
             const resultItem = e.target.closest('.search-result-item[data-symbol]');
             if (resultItem && resultItem.dataset.symbol) {
-                this.selectStock(resultItem.dataset.symbol);
-                this.stockSearch.hideOutputContainer();
-                this.searchInput.value = '';
+                this.selectStock(resultItem.dataset.symbol).then(() => {
+                    this.stockSearch.hideOutputContainer();
+                    this.searchInput.value = '';
+                });
             }
         });
 
@@ -114,7 +100,7 @@ class ChartPage {
         this.stockListSelect.addEventListener('change', (e) => this.handleStockListChange(e.target.value));
 
         // Load chart button
-        this.loadChartBtn.addEventListener('click', () => this.loadChart());
+        this.loadChartBtn.addEventListener('click', () => this.assetChart.loadChart(this.currentSymbol));
 
         // Stock info hover and click to unselect
         this.currentStockInfo.addEventListener('mouseover', () => {
@@ -135,28 +121,14 @@ class ChartPage {
         });
         this.currentStockInfo.addEventListener('click', () => this.unselectStock());
 
-        // Chart controls - use updateChart instead of loadChart
-        this.chartTypeSelect.addEventListener('change', () => this.updateChart({ chartType: this.chartTypeSelect.value }));
-        this.periodSelect.addEventListener('change', (e) => {
-            this.customDateRange.style.display = e.target.value === 'custom' ? 'flex' : 'none';
-            if (e.target.value !== 'custom') this.updateChart({ period: e.target.value });
-        });
-        this.intervalSelect.addEventListener('change', () => this.updateChart({ interval: this.intervalSelect.value }));
-        this.startDate.addEventListener('change', () => {
-            if (this.startDate.value && this.endDate.value) this.updateChart({ start: this.startDate.value, end: this.endDate.value });
-        });
-        this.endDate.addEventListener('change', () => {
-            if (this.startDate.value && this.endDate.value) this.updateChart({ start: this.startDate.value, end: this.endDate.value });
-        });
-
         // Fullscreen chart button
         this.fullscreenChartBtn.addEventListener('click', () => {
-            if (this.chart) new ChartFullscreenHelper(this.chartContainer, this.chart).enter();
+            if (this.assetChart.chart) new ChartFullscreenHelper(this.assetChart.chartContainer, this.assetChart.chart).enter();
         });
 
         // Export chart button
         this.exportChartBtn.addEventListener('click', (e) => {
-            if (this.chart) new ChartExportMenuHelper(this.exportChartBtn, new ChartExportHelper(this.chart)).show(e);
+            if (this.assetChart.chart) new ChartExportMenuHelper(this.exportChartBtn, new ChartExportHelper(this.assetChart.chart)).show(e);
         });
     }
 
@@ -164,57 +136,36 @@ class ChartPage {
      * Load chart state from URL parameters
      */
     loadFromURLParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        const symbol = urlParams.get('symbol');
-        const chartType = urlParams.get('chartType');
-        const period = urlParams.get('period');
-        const interval = urlParams.get('interval');
-        const start = urlParams.get('start');
-        const end = urlParams.get('end');
-
-        // Set form values from URL params
-        if (chartType) this.chartTypeSelect.value = chartType;
-        if (period) this.periodSelect.value = period;
-        if (interval) this.intervalSelect.value = interval;
-        if (start) this.startDate.value = start;
-        if (end) this.endDate.value = end;
-
-        // Show custom date range if start/end are provided
-        if (start && end) {
-            this.periodSelect.value = 'custom';
-            this.customDateRange.style.display = 'flex';
-        }
+        const symbol = this.assetChart.loadFromURLParams();
 
         // Load symbol if provided
-        if (symbol) this.selectStock(symbol).then(() => this.loadChart());
+        if (symbol) this.selectStock(symbol).then(() => this.assetChart.loadChart(symbol));
     }
 
     /**
-     * Update URL parameters with current chart state
+     * Handle chart state changes
      */
-    updateURLParams() {
-        const urlParams = new URLSearchParams(window.location.search);
+    onChartStateChange(state) {
+        // Handle any additional logic when chart state changes, later... probably....
+        console.log('Chart state changed:', state);
+    }
 
-        // Update parameters
-        if (this.currentSymbol) urlParams.set('symbol', this.currentSymbol);
-        else urlParams.delete('symbol');
+    /**
+     * Handle when chart is loaded
+     */
+    onChartLoaded(symbol) {
+        // Show action buttons when chart is loaded
+        this.fullscreenChartBtn.style.display = '';
+        this.exportChartBtn.style.display = '';
+    }
 
-        if (this.chartTypeSelect.value) urlParams.set('chartType', this.chartTypeSelect.value);
-        if (this.periodSelect.value) urlParams.set('period', this.periodSelect.value);
-        if (this.intervalSelect.value) urlParams.set('interval', this.intervalSelect.value);
-
-        if (this.startDate.value && this.endDate.value) {
-            urlParams.set('start', this.startDate.value);
-            urlParams.set('end', this.endDate.value);
-        } else {
-            urlParams.delete('start');
-            urlParams.delete('end');
-        }
-
-        // Update URL without chart reload
-        const newURL = `${window.location.pathname}?${urlParams.toString()}`;
-        window.history.replaceState({}, '', newURL);
+    /**
+     * Handle when chart is cleared
+     */
+    onChartCleared() {
+        // Hide action buttons when chart is cleared
+        this.fullscreenChartBtn.style.display = 'none';
+        this.exportChartBtn.style.display = 'none';
     }
 
     /**
@@ -317,9 +268,6 @@ class ChartPage {
             this.updateCurrentStockInfo(stockData);
             this.currentSymbol = symbol;
             this.loadChartBtn.disabled = false;
-
-            // Update URL parameters
-            this.updateURLParams();
         } catch (error) {
             console.error('Error selecting stock:', error);
             showNotification(`Failed to load data for ${symbol}`, 'danger');
@@ -349,83 +297,9 @@ class ChartPage {
     unselectStock() {
         this.currentSymbol = null;
         this.currentStockInfo.style.display = 'none';
-        this.chartTitle.textContent = 'Stock Chart';
-        this.chartTitle.parentElement.onclick = null;
-        this.chartTitle.parentElement.style.cursor = 'default';
-        this.chartTitle.parentElement.title = '';
-        this.chartControls.style.display = 'none';
         this.loadChartBtn.disabled = true;
 
-        this.fullscreenChartBtn.style.display = 'none';
-        this.exportChartBtn.style.display = 'none';
-
-        // Update URL parameters to clear symbol
-        this.updateURLParams();
-
-        // Clear chart
-        if (this.chart) {
-            this.chartContainer.innerHTML = `
-                <div class="d-flex justify-content-center align-items-center h-100 text-muted">
-                    <div class="text-center">
-                        <i class="fas fa-chart-line fa-3x mb-3"></i>
-                        <h5>Select a stock to view its chart</h5>
-                        <p class="mb-0">Use the search box or dropdown above to choose a stock</p>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    /**
-     * Load and render the stock chart for the selected symbol (create new StockChart instance - this.chart)
-     * @param symbol {string} - The stock symbol to load the chart for (defaults to currentSymbol)
-     * @returns {Promise<void>} - Resolves when the chart is loaded and rendered
-     */
-    async loadChart(symbol = this.currentSymbol) {
-        if (!symbol) return;
-
-        // Update chart title and show controls
-        this.chartTitle.textContent = `${symbol} Chart`;
-        this.chartTitle.parentElement.onclick = () => window.location.href = `/stock/${symbol}`;
-        this.chartTitle.parentElement.style.cursor = 'pointer';
-        this.chartTitle.parentElement.title = 'Go to stock page';
-        this.chartControls.style.display = 'flex';
-
-        // Show action buttons
-        this.fullscreenChartBtn.style.display = '';
-        this.exportChartBtn.style.display = '';
-
-        // Prepare chart parameters
-        let options = {
-            chartType: this.chartTypeSelect.value,
-            period: this.periodSelect.value,
-            interval: this.intervalSelect.value
-        };
-
-        if (options.period === 'custom' && (this.startDate.value && this.endDate.value)) {
-            options.period = null;
-            options.start = this.startDate.value;
-            options.end = this.endDate.value;
-        }
-
-        // Create new chart instance
-        this.chart = new StockChart(this.elements.chartContainerId, symbol, options);
-
-        // Render the chart
-        this.chart.render();
-    }
-
-    /**
-     * Update the existing chart with new options (without reloading data if possible)
-     * @param options {object} - Chart options to update: {chartType, period, interval, start, end}
-     */
-    updateChart(options = {}) {
-        if (!this.chart) return;
-
-        if ('chartType' in options) this.chart.setChartType(options.chartType);
-        if (['period', 'interval', 'start', 'end'].some(key => key in options)) this.chart.setOptions(options);
-
-        // Update url parameters
-        this.updateURLParams();
+        // Clear chart using AssetChart
+        this.assetChart.clearChart();
     }
 }
