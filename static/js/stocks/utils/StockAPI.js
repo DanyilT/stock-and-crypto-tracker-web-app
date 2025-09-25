@@ -215,6 +215,7 @@ async function getPopularStocksList(top = 10, symbolsOnly = false) {
 /**
  * Get individual stock data
  * @param {string} symbol - Stock symbol
+ * @param fullData
  * @returns {Promise<Object>} Stock data
  */
 async function getStock(symbol, fullData = false) {
