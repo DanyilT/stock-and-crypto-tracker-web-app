@@ -153,18 +153,28 @@ class StockTab {
 
 
 /**
- * Overview tab implementation
+ * Overview tab implementation with configurable content sections
  */
 class StockOverviewTab extends StockTab {
     /**
      * Constructor
      * @param symbol {string} - Stock symbol
+     * @param options {object} - Configuration options
+     * @param options.title {string} - Custom title for the tab (default: 'Overview')
+     * @param options.icon {string} - Custom icon class for the tab (default: 'fas fa-chart-line')
+     * @param options.sections {Array} - Array of sections to include: ['header', 'stats', 'market', 'company', 'summary']
      */
-    constructor(symbol) {
+    constructor(symbol, options = {}) {
         super(symbol);
-        this.title = 'Overview';
-        this.icon = 'fas fa-chart-line';
+        this.title = options.title || 'Overview';
+        this.icon = options.icon || 'fas fa-chart-line';
         this.id = 'overview-tab';
+
+        // Available sections
+        const availableSections = ['header', 'stats', 'market', 'company', 'summary'];
+        this.selectedSections = options.sections || availableSections; // Default to all sections
+        // If selected sections (not all) set id as "overview-<sections>-tab"
+        if (this.selectedSections.length !== availableSections.length) this.id = `overview-${this.selectedSections.join('-')}-tab`;
 
         this.api = () => StockAPI.getStock(symbol, true);
     }
@@ -232,8 +242,8 @@ class StockOverviewTab extends StockTab {
                 <div class="row mb-4">
                     ${generateStatCard('Previous Close', StockFormatters.formatPrice(data.previousClose, { currency: data.currency }))}
                     ${generateStatCard('Open', StockFormatters.formatPrice(data.openPrice, { currency: data.currency }))}
-                    ${generateStatCard('Day Range', StockFormatters.formatPrice(data.dayLow, { currency: data.currency }) - StockFormatters.formatPrice(data.dayHigh, { currency: data.currency }))}
-                    ${generateStatCard('52 Week Range', StockFormatters.formatPrice(data.fiftyTwoWeekLow, { currency: data.currency }) - StockFormatters.formatPrice(data.fiftyTwoWeekHigh, { currency: data.currency }))}
+                    ${generateStatCard('Day Range', `${StockFormatters.formatPrice(data.dayLow, { currency: data.currency })} - ${StockFormatters.formatPrice(data.dayHigh, { currency: data.currency })}`)}
+                    ${generateStatCard('52 Week Range', `${StockFormatters.formatPrice(data.fiftyTwoWeekLow, { currency: data.currency })} - ${StockFormatters.formatPrice(data.fiftyTwoWeekHigh, { currency: data.currency })}`)}
                 </div>
             `;
         }
@@ -339,15 +349,15 @@ class StockOverviewTab extends StockTab {
         }
 
         return `
-            ${generateHeader(this.data)}
-            ${generateStats(this.data)}
+            ${this.selectedSections.includes('header') ? generateHeader(this.data) : ''}
+            ${this.selectedSections.includes('stats') ? generateStats(this.data) : ''}
 
-            <div class="row mb-4">
-                ${generateMarketData(this.data)}
-                ${generateCompanyInfo(this.data)}
-            </div>
+            ${this.selectedSections.includes('market') || this.selectedSections.includes('company') ? `<div class="row mb-4">
+                ${this.selectedSections.includes('market') ? generateMarketData(this.data) : ''}
+                ${this.selectedSections.includes('company') ? generateCompanyInfo(this.data) : ''}
+            </div>` : ''}
 
-            ${generateCompanySummary(this.data.businessSummary)}
+            ${this.selectedSections.includes('summary') ? generateCompanySummary(this.data.businessSummary) : ''}
         `;
     }
 }
