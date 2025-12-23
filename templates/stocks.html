@@ -17,17 +17,14 @@
     </div>
 
     {% include "partials/stocks_table.html" %}
-
-
-{#    <div id="stock-chart"></div>#}
-
-{#    <div class="mt-4">#}
-{#        {{ asset_chart.asset_chart('stock-chart', 'Stock Chart') }}#}
-{#    </div>#}
 </div>
 
 <!-- utils -->
+<script src="{{ url_for('static', filename='js/stocks/utils/StockAPI.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/utils/StockFormatters.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/utils/MarketTradingHours.js') }}"></script>
 <script src="{{ url_for('static', filename='js/stocks/utils/StockHelpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/utils/PageHelpers.js') }}"></script>
 
 <!-- features -->
 <script src="{{ url_for('static', filename='js/stocks/features/MarketStatusBanner.js') }}"></script>
@@ -54,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const watchlistManager = new StocksWatchlistManager();
 
-    new StockSearch('stock-search', 'search-results-container', 'search-results-table', watchlistManager);
+    new StockSearch('stock-search', 'search-results-container', true, { tableId: 'search-results-table', watchlistManager });
 
     const popularTable = new StocksTable('popular-stocks-table', watchlistManager);
     fetch('/api/stocks/popular')
@@ -85,89 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const watchlistLoader = new WatchlistLoader(watchlistTable, watchlistManager, true);
 
     // Setup control handlers
-    setupTableControls();
-
-
-
-    {#const stockChart = new StockChart();#}
-
-    {#var testStockChart = new StockChart('stock-chart');#}
-
-    {#fetch('/api/stock/AAPL/history')#}
-    {#    .then(response => response.json())#}
-    {#    .then(data => {#}
-    {#        testStockChart.renderChart('AAPL', data);#}
-    {#    })#}
-    {#    .catch(error => console.error('Error fetching stock data:', error));#}
-
-
-
-
-    function setupTableControls() {
-        const autoloadToggle = document.getElementById('stocks-autoload-toggle');
-        const reloadButton = document.getElementById('stocks-reload');
-        const tabsContainer = document.getElementById('stocks-tabs');
-
-        // Auto-loading toggle handler
-        autoloadToggle?.addEventListener('change', (e) => {
-            const enabled = e.target.checked;
-
-            if (enabled) {
-                popularLoader.enableAutoLoading();
-                watchlistLoader.enableAutoLoading();
-            } else {
-                popularLoader.disableAutoLoading();
-                watchlistLoader.disableAutoLoading();
-            }
-
-            // Update button state
-            if (reloadButton) {
-                reloadButton.disabled = enabled;
-                reloadButton.textContent = enabled ? 'Auto' : 'Reload';
-            }
-        });
-
-        // Manual reload handler
-        reloadButton?.addEventListener('click', async () => {
-            const activeTab = document.querySelector('#stocks-tabs .nav-link.active');
-            const isPopularTab = activeTab?.id === 'popular-tab';
-
-            reloadButton.disabled = true;
-            reloadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-
-            try {
-                if (isPopularTab) {
-                    await popularLoader.manualReload();
-                } else {
-                    await watchlistLoader.manualReload();
-                }
-            } finally {
-                reloadButton.disabled = autoloadToggle?.checked || false;
-                reloadButton.textContent = autoloadToggle?.checked ? 'Auto' : 'Reload';
-            }
-        });
-
-        // Update loader activity based on active tab
-        tabsContainer?.addEventListener('shown.bs.tab', (e) => {
-            const isPopularTab = e.target.id === 'popular-tab';
-            const isAutoloadEnabled = autoloadToggle?.checked || false;
-
-            // Only the active tab's loader should be running
-            if (isPopularTab) {
-                if (isAutoloadEnabled) popularLoader.enableAutoLoading();
-                watchlistLoader.disableAutoLoading();
-            } else {
-                if (isAutoloadEnabled) watchlistLoader.enableAutoLoading();
-                popularLoader.disableAutoLoading();
-            }
-        });
-
-        // Initialize button state
-        if (reloadButton && autoloadToggle) {
-            reloadButton.disabled = autoloadToggle.checked;
-            reloadButton.textContent = autoloadToggle.checked ? 'Auto' : 'Reload';
-        }
-    }
+    setupTableControls(popularLoader, watchlistLoader);
 });
 </script>
 {% endblock %}

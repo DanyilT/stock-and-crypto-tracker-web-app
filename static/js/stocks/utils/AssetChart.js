@@ -27,6 +27,7 @@ class AssetChart {
         this.options = {
             onSymbolClick: options.onSymbolClick || null,
             onStateChange: options.onStateChange || null,
+            linkTitle: options.linkTitle || 'Go to stock page',
             ...options
         };
 
@@ -147,7 +148,7 @@ class AssetChart {
             }
         };
         this.chartTitle.parentElement.style.cursor = 'pointer';
-        this.chartTitle.parentElement.title = 'Go to stock page';
+        this.chartTitle.parentElement.title = this.options.linkTitle;
         this.chartControls.style.display = 'flex';
 
         // Prepare chart parameters

@@ -2,6 +2,7 @@ class TableLoader {
     constructor(table, autoLoad = true) {
         this.table = table;
         this.autoLoadEnabled = autoLoad;
+        this.forceAutoload = false; // Force autoload even when markets are closed
         this.isLoading = false;
         this.isPageVisible = true;
         this.isTableVisible = false;
@@ -288,30 +289,33 @@ class TableLoader {
         const hasOpenMarkets = marketStatus.openMarkets.length > 0;
         const hasClosedMarkets = marketStatus.closedMarkets.length > 0;
 
-        // Only update rows for open markets when autoloading
-        for (const openMarket of marketStatus.openMarkets) {
+        // Determine which rows to update
+        const rowsToUpdate = this.forceAutoload ? [...marketStatus.openMarkets, ...marketStatus.closedMarkets] : marketStatus.openMarkets;
+
+        // Update rows (open markets only, or all if forceAutoload is enabled)
+        for (const item of rowsToUpdate) {
             if (this.autoLoadEnabled) {
                 try {
-                    const stockData = await this.fetchStockData(openMarket.symbol);
+                    const stockData = await this.fetchStockData(item.symbol);
                     if (stockData) {
                         // Update just this row's data
-                        const currentIndex = Array.from(openMarket.row.parentNode.children).indexOf(openMarket.row);
+                        const currentIndex = Array.from(item.row.parentNode.children).indexOf(item.row);
                         const newRow = this.table.createTableRow(stockData, currentIndex);
-                        openMarket.row.parentNode.replaceChild(newRow, openMarket.row);
+                        item.row.parentNode.replaceChild(newRow, item.row);
                     }
                 } catch (error) {
-                    console.warn(`Failed to update ${openMarket.symbol}:`, error);
+                    console.warn(`Failed to update ${item.symbol}:`, error);
                 }
             }
         }
 
-        // Handle closed markets
-        if (hasClosedMarkets) {
+        // Handle closed markets (set timers for market open)
+        if (hasClosedMarkets && !this.forceAutoload) {
             this.handleClosedMarkets(marketStatus.closedMarkets);
         }
 
-        // Only stop autoloading if ALL markets are closed AND no timers are pending
-        if (!hasOpenMarkets && hasClosedMarkets && this.autoLoadEnabled && this.marketTimers.size === 0) {
+        // Only stop autoloading if ALL markets are closed AND no timers are pending AND forceAutoload is disabled
+        if (!hasOpenMarkets && hasClosedMarkets && this.autoLoadEnabled && !this.forceAutoload && this.marketTimers.size === 0) {
             this.stopAutoLoading();
             showNotification('All markets are closed. Auto-loading paused.', 'info', { timestamp: true });
         }
@@ -375,6 +379,19 @@ class TableLoader {
         if (wasEnabled) {
             showNotification('Auto-loading disabled', 'warning', { timestamp: true, timeout: 3000 });
         }
+    }
+
+    setForceAutoload(enabled) {
+        this.forceAutoload = enabled;
+
+        if (enabled && this.autoLoadEnabled && !this.intervalId && this.isPageVisible && this.isTableVisible) {
+            // If force is enabled and autoload is on, restart autoloading
+            this.startAutoLoading();
+        }
+    }
+
+    getForceAutoload() {
+        return this.forceAutoload;
     }
 
     // Abstract methods - to be implemented by child classes

@@ -1,4 +1,9 @@
 class StocksTable {
+    /**
+     * Initializes the StocksTable instance
+     * @param tableId {string} - ID of the table body element where stock rows will be rendered
+     * @param watchlistManager {StocksWatchlistManager} - Instance of WatchlistManager to manage watchlist actions
+     */
     constructor(tableId, watchlistManager) {
         this.tableId = tableId;
         this.data = [];
@@ -8,24 +13,43 @@ class StocksTable {
         this.init();
     }
 
+    /**
+     * Sets the table ID and re-initializes the table
+     * @param tableId {string} - New table body ID
+     */
+    setTableId(tableId) {
+        this.tableId = tableId;
+        this.init();
+    }
+
+    /**
+     * Gets the current table ID
+     * @returns {string} - Current table body ID
+     */
+    getTableId() {
+        return this.tableId;
+    }
+
+    /**
+     * Initializes the table by getting the tbody element
+     */
     init() {
         this.tbody = document.getElementById(this.tableId);
         if (!this.tbody) console.error(`Table body not found for ${this.tableId}`);
     }
 
+    /**
+     * Renders the stock data into the table
+     */
     render() {
         if (!this.tbody) return;
         this.tbody.innerHTML = '';
-
-        this.data.forEach((item, idx) => {
-            const row = this.createTableRow(item, idx);
-            this.tbody.appendChild(row);
-        });
+        this.data.forEach((item, idx) => { this.tbody.appendChild(this.createTableRow(item, idx)) });
     }
 
     createTableRow(item, index) {
-        // Helper values
-        const marketStatus = this.getMarketStatus(item.market);  // Market open/close status (true/false/unknown)
+        // Market open/close status (true/false/unknown)
+        const marketStatus = this.getMarketStatus(item.market);
 
         // Format values using StockFormatters
         const formattedSymbol = StockFormatters.formatSymbol(item.symbol);

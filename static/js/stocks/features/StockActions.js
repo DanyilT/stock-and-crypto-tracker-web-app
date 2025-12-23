@@ -45,7 +45,7 @@ class StockActions {
                 <div class="chart-wrapper">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex align-items-center">
-                            <h6 class="mb-0 text-primary me-4">
+                            <h6 class="mb-0 text-primary me-4" onclick="window.location.href='/stocks/chart?symbol=${symbol}'" title="Go to stock chart page" style="cursor: pointer;">
                                 <i class="fas fa-chart-line me-2"></i>Chart for ${symbol}
                             </h6>
                             <div class="d-flex gap-3 align-items-center">
@@ -148,8 +148,8 @@ class StockActions {
         const chartEl = document.getElementById(containerId);
         if (chartEl) {
             try {
-                const tempChart = new StockChart(containerId);
-                tempChart.showLoadingMessage(chartEl, 'Loading chart data...');
+                const tempChart = new StockChart(containerId, symbol, { chartType });
+                tempChart.showChartLoading('Loading chart data...');
             } catch (_) {
                 chartEl.innerHTML = '<div class="text-muted">Loading chart data...</div>';
             }
@@ -168,15 +168,17 @@ class StockActions {
             // Use StockAPI for fetching historical data
             StockAPI.getStockHistory(symbol, options)
                 .then(data => {
-                    new StockChart(containerId, { chartType }).renderChart(symbol, data);
+                    // Instantiate StockChart correctly and render
+                    const chart = new StockChart(containerId, symbol, { chartType, ...options });
+                    chart.render();
                 })
                 .catch(error => {
                     console.error('Error fetching stock data:', error);
                     // Show an error message in the chart area
                     if (chartEl) {
                         try {
-                            const tempChart = new StockChart(containerId);
-                            tempChart.showErrorMessage(chartEl, 'Failed to load chart data.');
+                            const tempChart = new StockChart(containerId, symbol, { chartType });
+                            tempChart.showChartError('Failed to load chart data.');
                         } catch (_) {
                             chartEl.innerHTML = '<div class="text-danger">Failed to load chart data.</div>';
                         }

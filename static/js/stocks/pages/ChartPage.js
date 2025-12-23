@@ -26,7 +26,8 @@ class ChartPage {
             onSymbolClick: (symbol) => window.location.href = `/stock/${symbol}`,
             onStateChange: (state) => this.onChartStateChange(state),
             onChartLoaded: (symbol) => this.onChartLoaded(symbol),
-            onChartCleared: () => this.onChartCleared()
+            onChartCleared: () => this.onChartCleared(),
+            linkTitle: 'Go to stock details page'
         });
         this.watchlistManager = new StocksWatchlistManager();
 

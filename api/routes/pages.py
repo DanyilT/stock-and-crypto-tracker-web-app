@@ -23,6 +23,7 @@ def register_page_routes(app):
         """Stocks chart page with stock search and chart visualization"""
         return render_template('stocks_chart.html')
 
+    @app.route('/stocks/<symbol>')
     @app.route('/stock/<symbol>')
     def stock_detail(symbol):
         """Stock detail page"""

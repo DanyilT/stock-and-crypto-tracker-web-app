@@ -61,7 +61,9 @@ class StockDetailPage {
                 urlParams.set('period', urlParams.get('period') || '');
                 urlParams.set('interval', urlParams.get('interval') || '');
                 window.location.href = `/stocks/chart?${urlParams.toString()}`;
-        }});
+            },
+            linkTitle: 'Go to chart page'
+        });
         this.assetChart.loadFromURLParams();
         this.assetChart.loadChart(this.symbol);
     }
