@@ -25,3 +25,9 @@ def validate_date_format(date_string):
     if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_string):
         return False, 'Date format is invalid. Use (yyyy-mm-dd) format'
     return True, None
+
+def validate_crypto_days(days):
+    """Validate crypto historical data days parameter"""
+    if days not in Config.VALID_CRYPTO_DAYS:
+        return False, f'Invalid days: "{days}". Use: {", ".join(Config.VALID_CRYPTO_DAYS)}'
+    return True, None

@@ -6,11 +6,18 @@ class Config:
 
     # API endpoints
     MARKET_CAP_URL = 'https://companiesmarketcap.com/'
+    COINGECKO_API_URL = 'https://api.coingecko.com/api/v3'
 
-    # Valid periods and intervals
+    # Valid periods and intervals for stocks
     VALID_PERIODS = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
     VALID_INTERVALS = ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo']
 
     # Market configuration
     US_EXCHANGES = ['NYQ', 'NAS', 'NMS', 'ASE', 'PCX', 'BATS', 'ARCX']
     EU_EXCHANGES = ['AMS', 'XETRA', 'FRA', 'PAR', 'LSE', 'SWX', 'VIE', 'MIL', 'BRU', 'STO', 'CPH', 'HEL', 'MCE']
+
+    # Crypto configuration
+    MAX_TOP_CRYPTOS = 100
+    DEFAULT_TOP_CRYPTOS = 10
+    CRYPTO_CACHE_DURATION = 300  # 5 minutes (crypto prices change more frequently)
+    VALID_CRYPTO_DAYS = ['1', '7', '14', '30', '90', '180', '365', 'max']

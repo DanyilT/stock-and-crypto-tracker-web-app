@@ -28,3 +28,20 @@ def register_page_routes(app):
     def stock_detail(symbol):
         """Stock detail page"""
         return render_template('stock_detail.html', symbol=symbol.upper())
+
+    @app.route('/crypto')
+    def crypto():
+        """Crypto page with popular cryptocurrencies and search ability"""
+        top = request.args.get('top', default=10, type=int)
+        top, _ = validate_top_stocks_count(top)  # Ensure top is between 1 and 100
+        return render_template('crypto.html', top=top)
+
+    @app.route('/crypto/chart')
+    def crypto_chart():
+        """Crypto chart page with crypto search and chart visualization"""
+        return render_template('crypto_chart.html')
+
+    @app.route('/crypto/<crypto_id>')
+    def crypto_detail(crypto_id):
+        """Crypto detail page"""
+        return render_template('crypto_detail.html', crypto_id=crypto_id.lower())

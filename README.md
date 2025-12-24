@@ -7,7 +7,7 @@ CS50's Final Project
   - [x] Frontend implementation
   - [x] Integration and testing
 - [ ] Crypto
-  - [ ] Backend implementation
+  - [x] Backend implementation
   - [ ] Frontend implementation
   - [ ] Integration and testing
 
