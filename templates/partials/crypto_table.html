@@ -1,0 +1,31 @@
+<div class="container my-4" id="crypto-table-container">
+    <ul class="nav nav-tabs mb-3" id="crypto-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="popular-crypto-tab" data-bs-toggle="tab" data-bs-target="#popular-crypto-pane" type="button" role="tab" aria-controls="popular-crypto-pane" aria-selected="true">
+                <i class="fas fa-fire me-1"></i>Popular
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="watchlist-crypto-tab" data-bs-toggle="tab" data-bs-target="#watchlist-crypto-pane" type="button" role="tab" aria-controls="watchlist-crypto-pane" aria-selected="false">
+                <i class="fas fa-star me-1"></i>Watchlist
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="crypto-tabs-content">
+        <div class="tab-pane fade show active" id="popular-crypto-pane" role="tabpanel" aria-labelledby="popular-crypto-tab" tabindex="0">
+            {{ asset_table.asset_table('popular-crypto-table', ['Rank', 'Symbol', 'Name', 'Price', 'Change (24h)', 'Market Cap', 'Actions']) }}
+        </div>
+        <div class="tab-pane fade" id="watchlist-crypto-pane" role="tabpanel" aria-labelledby="watchlist-crypto-tab" tabindex="0">
+            {{ asset_table.asset_table('watchlist-crypto-table', ['Rank', 'Symbol', 'Name', 'Price', 'Change (24h)', 'Market Cap', 'Actions']) }}
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-end gap-2 mt-2" id="crypto-controls">
+        <div class="form-check form-switch d-flex align-items-center gap-1">
+            <input class="form-check-input" type="checkbox" id="crypto-autoload-toggle" checked title="Autoload (enable/disable)">
+            <label class="form-check-label small text-muted" for="crypto-autoload-toggle">Auto</label>
+        </div>
+        <button id="crypto-reload" class="btn btn-sm btn-warning">Reload</button>
+    </div>
+</div>

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Crypto Charts - Financial Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-0"><i class="fab fa-bitcoin me-2 text-warning"></i>Crypto Charts</h1>
+            <p class="text-muted mb-0">Analyze cryptocurrency performance with interactive charts</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" id="fullscreen-chart-btn" style="display: none;">
+                <i class="fas fa-expand me-1"></i>Fullscreen
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="export-chart-btn" style="display: none;">
+                <i class="fas fa-download me-1"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Crypto Selection Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0"><i class="fas fa-search me-2"></i>Select Cryptocurrency</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Crypto Search -->
+                <div class="col-lg-4 col-md-6">
+                    <label for="crypto-search-input" class="form-label fw-bold">Search Crypto</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="crypto-search-input" placeholder="Enter crypto name or symbol (e.g., Bitcoin, ETH)">
+                        <div class="position-absolute top-50 end-0 translate-middle-y me-3"><i class="fas fa-search text-muted"></i></div>
+                    </div>
+                    <!-- Search Results -->
+                    <div id="crypto-search-results-container" class="mt-2" style="display: none;"></div>
+                </div>
+
+                <!-- Crypto Selection Type -->
+                <div class="col-lg-3 col-md-6">
+                    <label for="crypto-source-select" class="form-label fw-bold">Select From</label>
+                    <select class="form-select" id="crypto-source-select">
+                        <option value="">Choose source...</option>
+                        <option value="popular">Popular Cryptos</option>
+                        <option value="watchlist">My Watchlist</option>
+                    </select>
+                </div>
+
+                <!-- Crypto List Dropdown -->
+                <div class="col-lg-3 col-md-6">
+                    <label for="crypto-list-select" class="form-label fw-bold">Available Cryptos</label>
+                    <select class="form-select" id="crypto-list-select" disabled>
+                        <option value="">Select a source first...</option>
+                    </select>
+                </div>
+
+                <!-- Load Chart Button -->
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label fw-bold">&nbsp;</label>
+                    <div>
+                        <button class="btn btn-primary w-100" id="load-chart-btn" disabled><i class="fas fa-chart-area me-1"></i>Load Chart</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Crypto Info -->
+            <div id="current-crypto-info" class="mt-3 p-3 bg-light rounded position-relative" style="display: none;">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="mb-1">
+                            <img id="current-crypto-image" src="" alt="" width="24" height="24" class="me-2 rounded-circle" style="display: none;">
+                            <span id="current-crypto-symbol" class="badge bg-warning text-dark">-</span>
+                            <span id="current-crypto-name" class="ms-2">-</span>
+                        </h6>
+                        <div class="text-muted small" id="current-crypto-rank">-</div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="h5 mb-1" id="current-crypto-price">-</div>
+                        <div id="current-crypto-change" class="small">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    {% include "partials/asset_chart.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Load required JavaScript files -->
+<script src="{{ url_for('static', filename='js/crypto/utils/CryptoAPI.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/utils/CryptoFormatters.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/core/CryptoWatchlistManager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/features/CryptoSearch.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stocks/utils/ChartHelpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/pages/ChartPage.js') }}"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => new ChartPage());
+</script>
+{% endblock %}

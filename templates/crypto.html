@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% import "partials/asset_table.html" as asset_table %}
+{% import "partials/search_bar.html" as search_bar %}
+
+{% block title %}Cryptocurrency - Financial Dashboard{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row align-items-center mb-4">
+        <div class="col"><h1 class="mb-0"><i class="fab fa-bitcoin me-2"></i>Cryptocurrency</h1></div>
+        {{ search_bar.search_bar('crypto-search', placeholder='Search cryptocurrencies...') }}
+    </div>
+
+    <div id="search-results-container" class="mt-3" style="display:none;">
+        {{ asset_table.asset_table('search-results-table', ['Rank', 'Symbol', 'Name', 'Price', 'Change (24h)', 'Market Cap', 'Actions']) }}
+    </div>
+
+    {% include "partials/crypto_table.html" %}
+</div>
+
+<!-- utils -->
+<script src="{{ url_for('static', filename='js/crypto/utils/CryptoAPI.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/utils/CryptoFormatters.js') }}"></script>
+
+<!-- core -->
+<script src="{{ url_for('static', filename='js/crypto/core/CryptoTable.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/core/CryptoWatchlistManager.js') }}"></script>
+
+<!-- features -->
+<script src="{{ url_for('static', filename='js/crypto/features/CryptoActions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/features/CryptoSearch.js') }}"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+<!-- loaders -->
+<script src="{{ url_for('static', filename='js/crypto/loaders/PopularCryptoLoader.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crypto/loaders/WatchlistCryptoLoader.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const watchlistManager = new CryptoWatchlistManager();
+
+    // Initialize search
+    new CryptoSearch('crypto-search', 'search-results-container', true, {
+        tableId: 'search-results-table',
+        watchlistManager
+    });
+
+    // Initialize popular cryptos table
+    const popularTable = new CryptoTable('popular-crypto-table', watchlistManager);
+    const popularLoader = new PopularCryptoLoader(popularTable, {{ top }}, true);
+
+    // Initialize watchlist table
+    const watchlistTable = new CryptoTable('watchlist-crypto-table', watchlistManager);
+    const watchlistLoader = new WatchlistCryptoLoader(watchlistTable, watchlistManager, true);
+
+    // Setup controls
+    const autoloadToggle = document.getElementById('crypto-autoload-toggle');
+    const reloadButton = document.getElementById('crypto-reload');
+
+    autoloadToggle?.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        if (enabled) {
+            popularLoader.enableAutoLoading();
+            watchlistLoader.enableAutoLoading();
+        } else {
+            popularLoader.disableAutoLoading();
+            watchlistLoader.disableAutoLoading();
+        }
+        if (reloadButton) {
+            reloadButton.disabled = enabled;
+            reloadButton.textContent = enabled ? 'Auto' : 'Reload';
+        }
+    });
+
+    reloadButton?.addEventListener('click', async () => {
+        const activeTab = document.querySelector('#crypto-tabs .nav-link.active');
+        const isPopularTab = activeTab?.id === 'popular-crypto-tab';
+
+        reloadButton.disabled = true;
+        reloadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+        try {
+            if (isPopularTab) {
+                await popularLoader.manualReload();
+            } else {
+                await watchlistLoader.manualReload();
+            }
+        } finally {
+            reloadButton.disabled = autoloadToggle?.checked || false;
+            reloadButton.textContent = autoloadToggle?.checked ? 'Auto' : 'Reload';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -87,6 +87,11 @@ class CryptoService:
 
             return cryptos
 
+        # Fallback to stale cache if API request failed (rate limited, etc)
+        if self._popular_crypto_cache['data']:
+            print("API request failed, returning stale cache")
+            return self._popular_crypto_cache['data'][:top]
+
         return None
 
     def get_crypto_data(self, crypto_id, full_data=False):

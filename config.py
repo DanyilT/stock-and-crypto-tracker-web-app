@@ -19,5 +19,5 @@ class Config:
     # Crypto configuration
     MAX_TOP_CRYPTOS = 100
     DEFAULT_TOP_CRYPTOS = 10
-    CRYPTO_CACHE_DURATION = 300  # 5 minutes (crypto prices change more frequently)
+    CRYPTO_CACHE_DURATION = 120  # 2 minutes - respects CoinGecko rate limits (~30/min)
     VALID_CRYPTO_DAYS = ['1', '7', '14', '30', '90', '180', '365', 'max']
