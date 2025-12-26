@@ -132,6 +132,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let stockChart = null;
     let selectedAsset = null;
@@ -260,12 +261,12 @@
             <td><span class="badge bg-warning text-dark">${rank}</span></td>
             <td><strong>${crypto.symbol}</strong></td>
             <td class="text-truncate" style="max-width: 150px;" title="${crypto.name}">${crypto.name}</td>
-            <td><strong>$${crypto.current_price}</strong></td>
+            <td><strong>$${crypto.price}</strong></td>
             <td class="${changeClass}">
-                ${changeIcon} ${Math.abs(crypto.price_change_percentage_24h)}%
+                ${changeIcon} ${Math.abs(crypto.changePercent)}%
             </td>
-            <td>${crypto.market_cap}</td>
-            <td>${formatNumber(crypto.total_volume)}</td>
+            <td>${formatNumber(crypto.marketCap)}</td>
+            <td>${formatNumber(crypto.volume)}</td>
         `;
 
         row.addEventListener('click', function() {
@@ -312,15 +313,16 @@
 
         fetch(`/api/stock/${symbol}/history?period=${period}`)
             .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showChartError(data.error);
+            .then(response => {
+                if (response.error) {
+                    showChartError(response.error);
                     return;
                 }
 
-                updateChart(data, symbol, name);
+                const data = response.data || response;
+                updateChart(data, symbol);
                 updateChartTitle(`${symbol} - ${name}`);
-                updateDetailsButton(symbol, 'stock');
+                updateDetailsButton(symbol);
             })
             .catch(error => {
                 showChartError('Failed to load chart data');
@@ -334,15 +336,16 @@
 
         fetch(`/api/crypto/${cryptoId}/history?days=${days}`)
             .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showChartError(data.error);
+            .then(response => {
+                if (response.error) {
+                    showChartError(response.error);
                     return;
                 }
 
-                updateChart(data, symbol, name);
+                const data = response.data || response;
+                updateChart(data, symbol);
                 updateChartTitle(`${symbol} - ${name}`);
-                updateDetailsButton(symbol, 'crypto');
+                updateDetailsButton(cryptoId);
             })
             .catch(error => {
                 showChartError('Failed to load chart data');
@@ -350,14 +353,22 @@
             });
     }
 
-    function updateChart(data, symbol, name) {
+    function updateChart(data, symbol) {
         const ctx = document.getElementById('stockChart').getContext('2d');
+
+        if (!Array.isArray(data) || data.length === 0) {
+            showChartError('No chart data available');
+            return;
+        }
 
         if (stockChart) {
             stockChart.destroy();
         }
 
-        const labels = data.map(item => item.date);
+        const labels = data.map(item => {
+            const date = new Date(item.datetime);
+            return date.toLocaleDateString();
+        });
         const prices = data.map(item => item.price);
 
         stockChart = new Chart(ctx, {
@@ -446,14 +457,10 @@
         document.getElementById('chart-container').classList.remove('d-none');
     }
 
-    function updateDetailsButton(symbol, type) {
+    function updateDetailsButton(symbol) {
         const detailsBtn = document.getElementById('view-details-btn');
-        if (type === 'stock') {
-            detailsBtn.onclick = () => goToStockDetails(symbol);
-            detailsBtn.style.display = 'inline-block';
-        } else {
-            detailsBtn.style.display = 'none'; // Hide for crypto until crypto detail page is implemented
-        }
+        detailsBtn.onclick = () => goToStockDetails(symbol);
+        detailsBtn.style.display = 'inline-block';
     }
 
     function getDaysFromPeriod(period) {
@@ -467,10 +474,11 @@
     }
 
     function goToStockDetails(symbol) {
-        window.location.href = `/stock/${symbol}`;
+        window.location.href = `/${selectedAssetType}/${symbol}`;
     }
 
     function formatNumber(num) {
+        if (num === undefined || num === null) return 'N/A';
         if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
         if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
         if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
