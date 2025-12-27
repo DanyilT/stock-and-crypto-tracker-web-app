@@ -8,6 +8,8 @@ class Config:
     MARKET_CAP_URL = 'https://companiesmarketcap.com/'
     COINGECKO_API_URL = 'https://api.coingecko.com/api/v3'
 
+    DEFAULT_TOP_STOCKS_LIST = ['NVDA', 'AAPL', 'GOOG', 'MSFT', 'AMZN', 'META', 'AVGO', 'TSLA', 'TSM', 'BRK-B']  # Based on companiesmarketcap.com 27/12/2025 (skip 2222.SR)
+
     # Valid periods and intervals for stocks
     VALID_PERIODS = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
     VALID_INTERVALS = ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo']

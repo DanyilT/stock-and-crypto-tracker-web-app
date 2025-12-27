@@ -59,5 +59,11 @@ class CacheService:
             return symbols
 
         except Exception as e:
-            print(f"Error getting stocks from {Config.MARKET_CAP_URL}: {e}")
-            return jsonify({'error': f'Error getting stocks from {Config.MARKET_CAP_URL}: {str(e)}'}), 500
+            if Config.DEFAULT_TOP_STOCKS_LIST:
+                self._popular_stocks_cache['data'] = Config.DEFAULT_TOP_STOCKS_LIST
+                self._popular_stocks_cache['timestamp'] = time.time()
+                print(f"Returning default top stocks list due to error. Error: {e}")
+                return Config.DEFAULT_TOP_STOCKS_LIST
+            else:
+                print(f"Error getting stocks from {Config.MARKET_CAP_URL}: {e}")
+                return jsonify({'error': f'Error getting stocks from {Config.MARKET_CAP_URL}: {str(e)}'}), 500
