@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Terms & Conditions{% endblock %}
+
+{% block content %}
+<div class="text-center mt-5">
+    <h1>Terms & Conditions</h1>
+    <p>You asked for the legal stuff. Here it is:</p>
+
+    <div class="meme-container">
+        <img src="{{ meme_url }}" alt="Terms and Conditions Meme" class="img-fluid rounded shadow">
+    </div>
+
+    <p class="mt-4 fst-italic text-muted">TL;DR: It's open source. Do whatever you want.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    console.log("Terms page loaded. No lawyers were harmed in the making of this page.");
+</script>
+{% endblock %}

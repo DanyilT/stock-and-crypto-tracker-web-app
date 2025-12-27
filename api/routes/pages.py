@@ -45,3 +45,11 @@ def register_page_routes(app):
     def crypto_detail(crypto_id):
         """Crypto detail page"""
         return render_template('crypto_detail.html', crypto_id=crypto_id.lower())
+
+    @app.route('/terms')
+    def terms():
+        """Terms and Conditions page"""
+        # Use the 'doge' template for an open-source feel
+        # Format: https://api.memegen.link/images/<template>/<top>/<bottom>.png
+        meme_url = "https://api.memegen.link/images/doge/very_open_source/i_don't_care_how_you_use_it.png"
+        return render_template('terms.html', meme_url=meme_url)
