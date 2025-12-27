@@ -53,3 +53,9 @@ def register_page_routes(app):
         # Format: https://api.memegen.link/images/<template>/<top>/<bottom>.png
         meme_url = "https://api.memegen.link/images/doge/very_open_source/i_don't_care_how_you_use_it.png"
         return render_template('terms.html', meme_url=meme_url)
+
+    @app.route('/brew-coffee')
+    def brew_coffee():
+        """I'm a teapot"""
+        from flask import abort
+        abort(418)
