@@ -503,4 +503,95 @@
         updateChartTitle(`Error: ${message}`);
     }
 </script>
+
+<script>
+{% if session.get('qwerty_mode') %}
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Activate "Hackerman" Theme
+    document.body.classList.add('hackerman-mode');
+    document.querySelector('footer').classList.remove('bg-light');
+
+    // 2. Inject the $QWRT "qwerty coin" into your table/list
+    const tableBody = document.querySelector('#crypto-table');
+    if (tableBody) {
+        const fakeRow = `
+            <tr data-symbol="$QWRT" data-name="QwertyCoin" data-id="qwertycoin" data-type="crypto" class="easter-egg-row">
+                <td><img src="https://api.memegen.link/images/stonks/qwerty/coin.png" width="24"></td>
+                <td><strong>$QWRT</strong></td>
+                <td class="text-truncate"><strong>QwertyCoin</strong></td>
+                <td class="text-success"><strong>$1,337,420.69</strong></td>
+                <td class="text-success"><strong>+9001.99%</strong></td>
+                <td class="text-success"><strong>9999.7B</strong></td>
+                <td class="text-success"><strong>+a?%</strong></td>
+            </tr>
+        `;
+        // Wait until the table is not empty before inserting the fake row
+        const observer = new MutationObserver(() => {
+            if (tableBody.children.length > 0) {
+                tableBody.insertAdjacentHTML('afterbegin', fakeRow);
+                observer.disconnect();
+            }
+        });
+        observer.observe(tableBody, { childList: true });
+    }
+
+    // 3. Make all red prices turn Green and Flash
+    ['#stocks-table', '#crypto-table'].forEach(selector => {
+        const tbody = document.querySelector(selector);
+        if (tbody) {
+            const observer = new MutationObserver(() => {
+                if (tbody.querySelector('td.text-danger')) {
+                    tbody.querySelectorAll('td.text-danger').forEach(el => {
+                        el.classList.remove('text-danger');
+                        el.style.color = "#00ff00";
+                        el.classList.add('glitch-animate');
+                    });
+                    observer.disconnect();
+                }
+            });
+            observer.observe(tbody, { childList: true, subtree: true });
+        }
+    });
+
+    // 4. Show the "Access Granted" Meme Overlay
+    const overlayMeme = document.createElement('div');
+    overlayMeme.innerHTML = `
+        <div id="meme-popup" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; text-align:center;">
+            <img src="https://api.memegen.link/images/stonks/ACCESS/GRANTED.png" style="border: 5px solid #00ff00; box-shadow: 0 0 20px #00ff00; max-width:100%;">
+            <p style="color:#00ff00; font-family:monospace; background:black; padding:10px;">QWERTY MAINFRAME ACCESSED</p>
+            <button onclick="this.parentElement.remove()" style="background:#00ff00; border:none; padding:5px 10px; cursor:pointer;">DISMISS</button>
+        </div>
+    `;
+    document.body.appendChild(overlayMeme);
+});
+{% endif %}
+</script>
+<style>
+/* The Hackerman Theme */
+.hackerman-mode {
+    background-color: #0d0d0d !important;
+    color: #00ff41 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+}
+
+.hackerman-mode .card, .hackerman-mode table {
+    background: #1a1a1a !important;
+    border: 1px solid #00ff41 !important;
+}
+
+.hackerman-mode table td, .hackerman-mode table th {
+    background: none; !important;
+}
+
+.glitch-animate {
+    animation: pulse-green 1s infinite;
+}
+
+/* Make numbers glow/pulse */
+@keyframes pulse-green {
+    0% { text-shadow: 0 0 5px #00ff41; }
+    50% { text-shadow: 0 0 20px #00ff41; }
+    100% { text-shadow: 0 0 5px #00ff41; }
+}
+</style>
 {% endblock %}

@@ -59,3 +59,22 @@ def register_page_routes(app):
         """I'm a teapot"""
         from flask import abort
         abort(418)
+
+    @app.route('/qwerty')
+    def qwerty():
+        """Easter egg route"""
+        # Set a flag in the session to keep the egg active (for 24 hours or until reset)
+        from flask import session, redirect, url_for
+        from datetime import datetime, timedelta
+        session.permanent = True
+        app.permanent_session_lifetime = timedelta(hours=24)
+        session['qwerty_mode'] = True
+        session['qwerty_mode_set_at'] = datetime.utcnow().isoformat()
+        return redirect(url_for('index'))
+
+    @app.route('/qwerty/reset')
+    def reset_easter_egg():
+        from flask import session, redirect, url_for
+        session.pop('qwerty_mode', None)
+        session.pop('qwerty_mode_set_at', None)
+        return redirect(url_for('index'))
