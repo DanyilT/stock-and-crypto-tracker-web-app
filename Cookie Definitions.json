@@ -1,0 +1,157 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-08-25",
+  "categories": {
+    "essential": {
+      "name": "Essential Cookies",
+      "description": "Required for basic website functionality",
+      "required": true,
+      "icon": "fas fa-shield-alt",
+      "color": "danger",
+      "cookies": {
+        "session_token": {
+          "name": "Session Token",
+          "purpose": "Maintains user session state",
+          "duration": "Session only",
+          "type": "httpOnly",
+          "essential": true
+        },
+        "csrf_token": {
+          "name": "CSRF Protection",
+          "purpose": "Prevents cross-site request forgery attacks",
+          "duration": "Session only",
+          "type": "httpOnly",
+          "essential": true
+        },
+        "cookie_consent_status": {
+          "name": "Cookie Consent Status",
+          "purpose": "Remembers your cookie preferences",
+          "duration": "1 year",
+          "type": "localStorage",
+          "essential": true
+        }
+      }
+    },
+    "watchlist": {
+      "name": "Watchlist Storage",
+      "description": "Store your favorite stocks locally",
+      "required": false,
+      "icon": "fas fa-star",
+      "color": "primary",
+      "cookies": {
+        "stock_watchlist": {
+          "name": "Stock Watchlist",
+          "purpose": "Stores your favorite stocks for quick access",
+          "duration": "Persistent",
+          "type": "localStorage",
+          "essential": false
+        },
+        "watchlist_settings": {
+          "name": "Watchlist Settings",
+          "purpose": "Remembers watchlist display preferences",
+          "duration": "Persistent",
+          "type": "localStorage",
+          "essential": false
+        },
+        "last_watchlist_update": {
+          "name": "Last Update Timestamp",
+          "purpose": "Tracks when watchlist was last modified",
+          "duration": "Persistent",
+          "type": "localStorage",
+          "essential": false
+        }
+      }
+    },
+    "preferences": {
+      "name": "User Preferences",
+      "description": "Remember your display settings and customizations",
+      "required": false,
+      "icon": "fas fa-cog",
+      "color": "info",
+      "cookies": {
+        "user_theme": {
+          "name": "Theme Preference",
+          "purpose": "Remembers your selected theme (dark/light)",
+          "duration": "1 year",
+          "type": "localStorage",
+          "essential": false
+        },
+        "chart_settings": {
+          "name": "Chart Configuration",
+          "purpose": "Stores chart display preferences and settings",
+          "duration": "6 months",
+          "type": "localStorage",
+          "essential": false
+        },
+        "dashboard_layout": {
+          "name": "Dashboard Layout",
+          "purpose": "Remembers your dashboard widget arrangement",
+          "duration": "3 months",
+          "type": "localStorage",
+          "essential": false
+        },
+        "auto_refresh_interval": {
+          "name": "Auto-refresh Settings",
+          "purpose": "Stores your preferred data refresh interval",
+          "duration": "1 month",
+          "type": "localStorage",
+          "essential": false
+        },
+        "currency_preference": {
+          "name": "Currency Display",
+          "purpose": "Remembers your preferred currency for display",
+          "duration": "1 year",
+          "type": "localStorage",
+          "essential": false
+        }
+      }
+    },
+    "analytics": {
+      "name": "Analytics & Performance",
+      "description": "Help us improve the platform with anonymous usage data",
+      "required": false,
+      "icon": "fas fa-chart-bar",
+      "color": "success",
+      "cookies": {
+        "analytics_session": {
+          "name": "Analytics Session",
+          "purpose": "Tracks anonymous usage patterns",
+          "duration": "30 minutes",
+          "type": "sessionStorage",
+          "essential": false
+        },
+        "performance_metrics": {
+          "name": "Performance Data",
+          "purpose": "Collects anonymous performance metrics",
+          "duration": "7 days",
+          "type": "localStorage",
+          "essential": false
+        },
+        "feature_usage": {
+          "name": "Feature Usage Stats",
+          "purpose": "Tracks which features are used most",
+          "duration": "1 month",
+          "type": "localStorage",
+          "essential": false
+        },
+        "error_reporting": {
+          "name": "Error Reports",
+          "purpose": "Helps identify and fix bugs",
+          "duration": "1 week",
+          "type": "localStorage",
+          "essential": false
+        }
+      }
+    }
+  },
+  "compliance": {
+    "gdpr": true,
+    "ccpa": true,
+    "cookie_law": true
+  },
+  "contact": {
+    "privacy_policy": "/privacy",
+    "cookie_policy": "/cookies",
+    "contact_email": "privacy@stocktracker.com"
+  }
+}
